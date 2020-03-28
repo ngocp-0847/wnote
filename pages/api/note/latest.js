@@ -4,7 +4,7 @@ const client = new Client({ node: 'http://localhost:9200' })
 export default (req, res) => {
   if (req.method === 'POST') {
     const { id } = req.query;
-    client.search({  
+    client.search({
       index: 'wnote',
       body: {
         query: {
@@ -17,7 +17,6 @@ export default (req, res) => {
         },
       }
     },function(error, response, status) {
-      console.log('vao 1', error, response)
         if (error){
           console.log("index error: "+error)
         } else {

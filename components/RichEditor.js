@@ -1,8 +1,17 @@
 import React from 'react';
-import { EditorState, RichUtils, Entity, AtomicBlockUtils } from 'draft-js';
-import Editor from 'draft-js-plugins-editor';
+import {Editor, EditorState, RichUtils, Entity, AtomicBlockUtils,
+  Modifier, DefaultDraftBlockRenderMap, genKey ,
+  getDefaultKeyBinding, KeyBindingUtil
+} from 'draft-js';
+
 import CodeUtils from '../draft-js-code/lib';
-import Media from '../components/Media';
+import Atomic from './Atomic';
+import CodeBlock from './CodeBlock';
+import {getCurrentBlock} from '../components/utils/editor';
+import {addBlock, addAtomicBlock, addBlockWithKey} from '../components/utils/modifiers';
+import {getAllBlocks, insertBlockAfterKey} from '../components/utils';
+
+import { Map } from 'immutable';
 
 const ACCEPTED_MIMES_FOR_PASTE = [
   'image/png',
@@ -10,9 +19,23 @@ const ACCEPTED_MIMES_FOR_PASTE = [
   'image/gif',
 ];
 
+const newBlockRenderMap = Map({
+});
+const extendedBlockRenderMap = DefaultDraftBlockRenderMap.merge(newBlockRenderMap);
+
+const {hasCommandModifier} = KeyBindingUtil;
+
+function myKeyBindingFn(e) {
+  console.log('myKeyBindingFn:', e, e.shiftKey);
+  if (e.keyCode === 83 /* `S` key */ && hasCommandModifier(e)) {
+    return 'myeditor-save';
+  }
+  return getDefaultKeyBinding(e);
+}
+
 export class RichEditor extends React.Component {
   constructor(props) {
-    super(props);  
+    super(props);
   }
 
   readImageAsDataUrl = (image, callback) => {
@@ -20,7 +43,6 @@ export class RichEditor extends React.Component {
     reader.onloadend = () => {
       callback(reader.result);
     };
-    console.log('vao 3', image)
     reader.readAsDataURL(image);
   };
 
@@ -41,34 +63,40 @@ export class RichEditor extends React.Component {
     const { editorState } = this.props;
     if (files && files.length) {
       const file = files[0];
-  
+
       if (ACCEPTED_MIMES_FOR_PASTE.includes(file.type)) {
         this.readImageAsDataUrl(file, base64 => {
           const withAtomic = this.insertImageIntoEditor(editorState, base64);
-          console.log('atomic', withAtomic)
           this.onChange(withAtomic);
         });
 
         return 'handled';
       }
     }
-  
+
     return 'not-handled';
   };
   onChange = editorState => {
+    console.log('onChange:', getAllBlocks(editorState).toJS())
     this.props.onChange(editorState);
   };
-  
+
   focus = () => this.refs.editor.focus();
 
   handleKeyCommand = command => {
-    const { editorState } = this.props;
-    const newState = RichUtils.handleKeyCommand(editorState, command);
-    if (newState) {
-      this.onChange(newState);
-      return true;
+    console.log('handleKeyCommand:', command);
+    if (command === 'myeditor-save') {
+      return 'handled';
     }
-    return false;
+    return 'not-handled';
+
+    // const { editorState } = this.props;
+    // const newState = RichUtils.handleKeyCommand(editorState, command);
+    // if (newState) {
+    //   this.onChange(newState);
+    //   return true;
+    // }
+    // return false;
   };
   onTab = (evt) => {
     const { editorState } = this.props;
@@ -89,11 +117,38 @@ export class RichEditor extends React.Component {
     const type = block.getType();
     if (block.getType() === 'atomic') {
       return {
-        component: Media,
-        editable: false,
+        component: Atomic,
+        editable: true,
       };
     }
+
     return null;
+  };
+  handlePastedText = (text, html, editorState) => {
+    const blockMapTextPaste = ContentState.createFromText(text.trim()).blockMap;
+    const contentState = editorState.getCurrentContent();
+    const blockMap = contentState.getBlockMap();
+    const selectionState = editorState.getSelection();
+    const currentBlock = getCurrentBlock(editorState);
+    console.log('handlePasteListText:', blockMapTextPaste.toJS())
+
+    if (currentBlock.getType() == 'code-block') {
+      let editorState = this.props.editorState;
+      editorState = insertBlockAfterKey(editorState, currentBlock.getKey(), blockMapTextPaste)
+      console.log('after add Block:', getAllBlocks(editorState).toJS());
+      this.onChange(editorState);
+      console.log('return true');
+      return true;
+    } else {
+      var newState = Modifier.replaceWithFragment(
+        this.props.editorState.getCurrentContent(),
+        this.props.editorState.getSelection(),
+        blockMap
+      );
+      newState = EditorState.push(this.props.editorState, newState, 'insert-fragment');
+    }
+    this.onChange(newState);
+    return true;
   };
   render() {
     const { editorState } = this.props;
@@ -118,15 +173,18 @@ export class RichEditor extends React.Component {
         />
         <div className={className} onClick={this.focus}>
           <Editor
+            blockRenderMap={extendedBlockRenderMap}
+            handlePastedText={this.handlePastedText}
             blockRendererFn={this.myBlockRenderer}
             handlePastedFiles={this.handlePastedFiles}
             blockStyleFn={getBlockStyle}
             customStyleMap={styleMap}
             editorState={editorState}
             handleKeyCommand={this.handleKeyCommand}
+            keyBindingFn={myKeyBindingFn}
             onChange={this.onChange}
             onTab={this.onTab}
-            placeholder="Tell a story..."
+            placeholder="Write note..."
             ref="editor"
             spellCheck={true}
             // plugins={[codeEditorPlugin]}
@@ -175,12 +233,12 @@ export class RichEditor extends React.Component {
               .RichEditor-editor .public-DraftStyleDefault-pre {
                 background-color: rgba(0, 0, 0, 0.05);
                 font-family: 'Inconsolata', 'Menlo', 'Consolas', monospace;
-                font-size: 16px;
+                font-size: 14px;
                 padding: 5px;
               }
 
               .RichEditor-editor .public-DraftStyleDefault-pre pre {
-                white-space: normal;
+                // white-space: normal;
               }
 
               .RichEditor-controls {
@@ -209,12 +267,13 @@ export class RichEditor extends React.Component {
 }
 // Custom overrides for "code" style.
 const styleMap = {
-  CODE: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    fontFamily: '"Inconsolata", "Menlo", "Consolas", monospace',
-    fontSize: 16,
-    padding: 2,
-  },
+  // CODE: {
+  //   backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  //   fontFamily: '"Inconsolata", "Menlo", "Consolas", monospace',
+  //   fontSize: 12,
+  //   padding: 2,
+  //   margin: 2,
+  // },
 };
 function getBlockStyle(block) {
   switch (block.getType()) {

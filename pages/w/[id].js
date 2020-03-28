@@ -3,101 +3,82 @@ import Layout from '../../components/layout.js';
 import React, { Component } from 'react';
 import NoSSR from 'react-no-ssr';
 import { RichEditor } from '../../components/RichEditor';
-import {EditorState, convertToRaw} from 'draft-js';
-import uuidv4 from 'uuid/v4';
-import fetch from 'node-fetch';
+import {EditorState, ContentState, convertToRaw} from 'draft-js';
 import Router, { useRouter, withRouter } from 'next/router';
-import {stateToHTML} from 'draft-js-export-html';
 import {connect} from 'react-redux';
-import {updateListNote} from '../../redux/actions/noteAction';
+import {loadListNote,
+  startSaveNote,
+  routeChangeComplete,
+  loadNoteById,
+  updateEditorState,
+  newEmptyNote,
+  activeNoteSidebar
+} from '../../redux/actions/noteAction';
+import classNames from 'classnames';
 
 class WID extends Component {
   constructor(props) {
     super(props);
-    this.state = {editorState: EditorState.createEmpty(), notes: [], shouldUpdate: true};
     Router.events.on('routeChangeComplete', (url) => {
-      this.setState({shouldUpdate: true})
+      this.props.routeChangeComplete(url)
     });
 
-    this.onChange = editorState => {
-      if (this.state.shouldUpdate) {
-        var shortContent = this.getContentForShortext(editorState)
-        console.log('vao 2', shortContent)
-        var body = {
-            'content': stateToHTML(editorState.getCurrentContent()),
-            'userID': localStorage.getItem('userID'),
-            'createdAt': new Date().getTime(),
-            'updatedAt': new Date().getTime(),
-        }
-        this.setState({editorState});
-        fetch('/api/note/' + this.props.router.query.id, {
-            method: 'POST', // *GET, POST, PUT, DELETE, etc.
-            mode: 'cors', // no-cors, *cors, same-origin
-            cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: 'same-origin', // include, *same-origin, omit
-            headers: {
-                'Content-Type': 'application/json'
-                // 'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            redirect: 'follow', // manual, *follow, error
-            referrerPolicy: 'no-referrer', // no-referrer, *client
-            body: JSON.stringify(body) // body data type must match "Content-Type" header
-        });
-      }
-    };
+    this.props.loadNoteById({noteID: this.props.router.query.id})
   }
   getContentForShortext = (editorState) => {
     var contentState = editorState.getCurrentContent();
     var arrBlocks = contentState.getBlocksAsArray();
-    var shortText = '';
+    var shortText = null;
     var shortImage = null;
-    console.log('vao 2', arrBlocks);
+
     arrBlocks.forEach((block, key) => {
       var text = block.getText();
-      if (shortImage == null && block.getType() == 'image') {
-        console.log('vao 1', block)
-        shortImage = block.src
+
+      if (shortImage == null && block.getType() == 'atomic') {
+        var blockKey = block.getEntityAt(0)
+        const blockImage = contentState.getEntity(blockKey);
+        shortImage = blockImage.getData();
       }
-      if (shortText == '' && text.trim() != '') {
-        shortText = text
+      if (shortText == null && text.trim() != '') {
+        shortText = block.getText()
       }
-      if (shortImage != null && shortText != '') {
+      if (shortImage != null && shortText != null) {
         return false;
       }
     })
 
     return {shortText: shortText, shortImage: shortImage}
   }
+
   onNewNote = () => {
-    var noteID = uuidv4()
-    Router.push(`/w/[id]`, `/w/${noteID}`, {shallow:true})
-    this.setState({shouldUpdate: false})
-    this.setState({editorState: EditorState.createEmpty()})
-  }
+    this.props.newEmptyNote();
+  };
+
+  onChange = (editorState) => {
+      if (this.props.shouldSave) {
+        var shortContent = this.getContentForShortext(editorState)
+        var body = {
+            'content': JSON.stringify(convertToRaw(editorState.getCurrentContent())),
+            'shortContent': shortContent,
+            'userID': localStorage.getItem('userID'),
+            'createdAt': new Date().getTime(),
+            'updatedAt': new Date().getTime(),
+        }
+        this.props.updateEditorState(editorState);
+        this.props.startSaveNote([this.props.router.query.id, body])
+      }
+  };
+
   componentDidMount() {
     var body = {
         userID: localStorage.getItem('userID'),
     }
-    fetch('/api/note', {
-        method: 'POST', // *GET, POST, PUT, DELETE, etc.
-        mode: 'cors', // no-cors, *cors, same-origin
-        cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-        credentials: 'same-origin', // include, *same-origin, omit
-        headers: {
-            'Content-Type': 'application/json'
-            // 'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        redirect: 'follow', // manual, *follow, error
-        referrerPolicy: 'no-referrer', // no-referrer, *client
-        body: JSON.stringify(body) // body data type must match "Content-Type" header
-    }).then((response) => {
-        response.json().then((d) => {
-            var data = d.data
-            console.log('vao 1', this.props.updateListNote)
-            this.props.updateListNote(d.data)
-        })
-    });
+
+    this.props.loadListNote(localStorage.getItem('userID'))
   }
+  activeNoteSidebar = (note) => {
+    this.props.activeNoteSidebar(note)
+  };
   render() {
     return (
       <main>
@@ -107,12 +88,21 @@ class WID extends Component {
             <div className="wr-hei-note">
               <div className="list-note">
                   {
-                      this.props.notes.map((note, i) => {
-                          return (
-                            <div key={i} className="note-c" dangerouslySetInnerHTML={{__html: note._source.content}}>
-                            </div>
-                          )
-                      })
+                    this.props.notes.map((note, i) => {
+                      return (
+                        <div key={i} className={classNames({'note-c': true, 'active': note._id == this.props.noteActive._id})} onClick={this.activeNoteSidebar.bind(this, note)}>
+                          <div className="text">{note._source.shortContent ? note._source.shortContent.shortText : ''}</div>
+                          {
+                            (note._source.shortContent && note._source.shortContent.shortImage) &&
+                            (
+                              <div className="image-s">
+                                <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
+                              </div>
+                            )
+                          }
+                        </div>
+                      )
+                    })
                   }
               </div>
             </div>
@@ -126,7 +116,7 @@ class WID extends Component {
           <NoSSR>
             <div className="editor">
               <RichEditor
-                editorState={this.state.editorState}
+                editorState={this.props.editorState}
                 onChange={this.onChange}
                 ref={element => {
                   this.editor = element
@@ -142,14 +132,21 @@ class WID extends Component {
 
 const mapStateToProps = state => {
   return {
-    notes: state.note.notes
+    notes: state.note.notes,
+    noteActive: state.note.noteActive,
+    shouldSave: state.note.shouldSave,
+    editorState: state.note.editorState,
   };
 };
 
 const mapDispatchToProps = {
-    updateListNote: updateListNote,
+  loadNoteById: loadNoteById,
+  loadListNote: loadListNote,
+  startSaveNote: startSaveNote,
+  routeChangeComplete: routeChangeComplete,
+  updateEditorState: updateEditorState,
+  newEmptyNote: newEmptyNote,
+  activeNoteSidebar: activeNoteSidebar,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));
-
-// export default withRouter(Layout(WID))

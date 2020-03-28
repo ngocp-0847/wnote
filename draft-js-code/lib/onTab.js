@@ -1,13 +1,32 @@
 var Draft = require('draft-js');
 var getIndentation = require('./utils/getIndentation');
+var getIndentForLine = require('./utils/getIndentForLine');
+
 ContentState = Draft.ContentState;
 ContentBlock = Draft.ContentBlock;
 SelectionState = Draft.SelectionState;
+EditorState = Draft.EditorState;
 
 const { Record, List } = require('immutable');
 
 // TODO: tab should complete indentation instead of just inserting one
 
+var indentation = '  ';
+
+function removeIndentText(text) {
+  let currentIndentLine = getIndentForLine(text);
+  return text.substr(currentIndentLine.length);
+}
+
+/**
+ * return [anchorOffset, focusOffset] for selection remove.
+ * @param  {[type]} text [description]
+ * @return {[type]}      [description]
+ */
+function offsetIndentWillRemove(text) {
+  let currentIndentLine = getIndentForLine(text);
+  return text.substr(currentIndentLine.length);
+}
 /**
  * Handle pressing tab in the editor
  *
@@ -22,22 +41,77 @@ function onTab(e, editorState) {
   var selectionState = editorState.getSelection();
   var startKey = selectionState.getStartKey();
   var endKey = selectionState.getEndKey();
-
   var currentBlock = contentState.getBlockForKey(startKey);
-  var endBlock = contentState.getBlockForKey(endKey);
-
-  var indentation = getIndentation(currentBlock.getText());
 
   if (selectionState.isCollapsed()) {
-    contentState = Draft.Modifier.insertText(
-      contentState,
-      selectionState,
-      indentation
-    );
+    if (e.shiftKey) {
+      let blockText = currentBlock.getText();
+      let currentIndentLine = getIndentForLine(blockText);
+      let newIndent = '';
+      let newTextChange = '';
+      const length = currentBlock.getLength();
+
+      if (currentIndentLine != '') {
+        if (currentIndentLine.length >= indentation.length) {
+          newIndent = currentIndentLine.substr(indentation.length);
+        }
+      }
+      console.log('onTab:shiftKey:', '|'+newIndent+'|', '|'+removeIndentText(blockText)+'|')
+      const blockSelection = SelectionState
+          .createEmpty(currentBlock.getKey())
+          .merge({
+            anchorOffset: 0,
+            focusOffset: length,
+          });
+      newTextChange = newIndent + removeIndentText(blockText);
+      contentState = Draft.Modifier.replaceText(
+        contentState,
+        blockSelection,
+        newTextChange
+      )
+      let newEditorState = Draft.EditorState.push(
+        editorState,
+        contentState,
+        'insert-text'
+      );
+      console.log('onTab:newIndent:', newIndent.length, '|'+newIndent+'|');
+      let currentKey = currentBlock.getKey();
+      let newSelection = selectionState.merge({
+        anchorKey: currentKey,
+        anchorOffset: newIndent.length,
+        focusKey: currentKey,
+        focusOffset: newIndent.length,
+      });
+
+      newEditorState = EditorState.forceSelection(
+        newEditorState,
+        newSelection
+      );
+
+      return newEditorState;
+    } else {
+      contentState = Draft.Modifier.insertText(
+        contentState,
+        selectionState,
+        indentation
+      );
+      return Draft.EditorState.push(
+        editorState,
+        contentState,
+        'insert-text'
+      );
+    }
   } else {
-    contentState.getBlockMap().map((block, k) => {
+    let anchorKey = selectionState.getAnchorKey();
+    let anchorOffset = selectionState.getAnchorOffset();
+    let focusKey = selectionState.getFocusKey();
+    let focusOffset = selectionState.getFocusOffset();
+
+    let block = contentState.getBlockForKey(anchorKey);
+
+    while (block != null) {
       const blockKey = block.getKey();
-      const length = block.getLength()
+      const length = block.getLength();
 
       const blockSelection = SelectionState
           .createEmpty(blockKey)
@@ -45,19 +119,71 @@ function onTab(e, editorState) {
             anchorOffset: 0,
             focusOffset: length,
           });
+      let newTextChange = '';
+      let blockText = block.getText();
+      let currentIndentLine = getIndentForLine(blockText);
+      let newIndent = '';
 
-          contentState = Draft.Modifier.replaceText(
-            contentState,
-            blockSelection,
-            indentation + block.getText(),
-          )
-    })
+      if (e.shiftKey) {
+        if (currentIndentLine != '') {
+          if (currentIndentLine.length >= indentation.length) {
+            newIndent = currentIndentLine.substr(indentation.length);
+          }
+        }
+        let deltaMove = (currentIndentLine.length - newIndent.length);
+        if (anchorKey == blockKey) {
+          anchorOffset -= deltaMove;
+        }
+        if (focusKey == blockKey) {
+          focusOffset -= deltaMove;
+        }
+        console.log('onTab:shiftKey:', newIndent+'|', removeIndentText(blockText)+'|')
+        newTextChange = newIndent + removeIndentText(blockText);
+      } else {
+        if (anchorKey == blockKey) {
+          anchorOffset += indentation.length;
+        }
+
+        if (focusKey == blockKey) {
+          focusOffset += indentation.length;
+        }
+
+        newTextChange = indentation + block.getText();
+      }
+
+      contentState = Draft.Modifier.replaceText(
+        contentState,
+        blockSelection,
+        newTextChange
+      )
+
+      if (blockKey == endKey) {
+        break;
+      } else {
+        block = contentState.getBlockAfter(blockKey)
+      }
+    }
+
+    let newEditorState = Draft.EditorState.push(
+      editorState,
+      contentState,
+      'insert-text'
+    );
+    const newSelection = SelectionState
+        .createEmpty(anchorKey)
+        .merge({
+          anchorKey: anchorKey,
+          anchorOffset: anchorOffset,
+          focusKey: focusKey,
+          focusOffset: focusOffset,
+        });
+
+    newEditorState = EditorState.forceSelection(
+      newEditorState,
+      newSelection
+    );
+    return newEditorState;
   }
-
-  return Draft.EditorState.push(
-    editorState,
-    contentState
-  );
 }
 
 module.exports = onTab;
