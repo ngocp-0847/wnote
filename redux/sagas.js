@@ -11,13 +11,17 @@ import {
   loadNoteById,
   updateEditorState,
   newEmptyNote,
-  activeNoteSidebar
+  activeNoteSidebar,
+  setSearch,
+  unsetSearch,
 } from './actions/noteAction';
 import noteService from './services/noteService.js'
 import {EditorState, convertFromRaw} from 'draft-js';
 import request from './requestHelper';
 import Router from 'next/router';
 import uuidv4 from 'uuid/v4';
+import { isEmpty } from 'lodash';
+import {createWithContent} from '../components/decorator';
 
 import es6promise from 'es6-promise';
 import 'isomorphic-unfetch';
@@ -40,7 +44,7 @@ function* fnSaveNote({payload}) {
   yield put(updateItemList(noteSaved));
 }
 
-function* fnLoadListNote({ payload }) {
+function* fnLoadListNote({payload}) {
   try {
     var body = {
       userID: payload
@@ -65,7 +69,6 @@ function* fnLoadListNote({ payload }) {
 }
 
 function* fnLoadNoteLastest() {
-  console.log('fnLoadNoteLastest:', userID)
   var userID = localStorage.getItem('userID');
   var noteID = uuidv4()
   if (userID == null) {
@@ -113,6 +116,7 @@ function* fnNewEmptyNote() {
   yield put(updateEditorState(editorState));
   var body = {
     'content': '',
+    'rawTextSearch': '',
     'shortContent': {shortText: null, shortImage: null},
     'userID': localStorage.getItem('userID'),
     'createdAt': new Date().getTime(),
@@ -142,7 +146,7 @@ function* fnLoadNoteById({ payload }) {
   if (data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     const state = convertFromRaw(JSON.parse(data.hits[0]._source.content));
-    var editorState = EditorState.createWithContent(state);
+    var editorState = createWithContent(state);
     yield put(updateEditorState(editorState));
   }
 
@@ -156,6 +160,30 @@ function* fnActiveNoteSidebar({ payload }) {
   yield* fnLoadNoteById({payload: {noteID: payload._id}})
 }
 
+function* fnSearch({ payload }) {
+  console.log('fnSearch', payload)
+  let body = {
+    userID: localStorage.getItem('userID'),
+    text: payload,
+  }
+  const results = yield call([noteService, 'fnSearch'], body);
+  console.log('fnSearch:call', results)
+  yield put(updateListNote(results.hits));
+  let noteLastest = !isEmpty(results.hits) ? results.hits[0] : null;
+  console.log('fnSearch:noteLastest:', noteLastest);
+  if (noteLastest) {
+    yield* fnActiveNoteSidebar({payload: {_id: noteLastest._id}});
+  }
+}
+
+
+function* fnUnSearch() {
+  console.log('fnUnSearch');
+  var userID = localStorage.getItem('userID');
+  yield* fnLoadListNote({payload: userID});
+}
+
+
 // notice how we now only export the rootSaga
 // single entry point to start all Sagas at once
 export default function* rootSaga() {
@@ -167,5 +195,7 @@ export default function* rootSaga() {
     takeLatest(loadNoteById().type, fnLoadNoteById),
     takeLatest(newEmptyNote().type, fnNewEmptyNote),
     takeLatest(activeNoteSidebar().type, fnActiveNoteSidebar),
+    takeLatest(setSearch().type, fnSearch),
+    takeLatest(unsetSearch().type, fnUnSearch),
   ])
 }

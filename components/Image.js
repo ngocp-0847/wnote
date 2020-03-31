@@ -1,6 +1,11 @@
 import React, { Component } from 'react';
 import clsx from 'clsx';
 
+const styles = {
+  width: {
+    maxWidth: '100%',
+  },
+}
 export default class Image extends Component {
   render() {
     const { block, className, theme = {}, ...otherProps } = this.props;
@@ -22,6 +27,7 @@ export default class Image extends Component {
     const { src } = contentState.getEntity(block.getEntityAt(0)).getData();
     return (
       <img
+        style={styles.width}
         {...elementProps}
         src={src}
         role="presentation"

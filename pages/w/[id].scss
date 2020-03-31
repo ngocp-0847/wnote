@@ -6,9 +6,20 @@
   }
   #header-editor #btn-n-note{
     align-self: center;
+    border-radius: 3px;
+    margin: 0px 5px;
+    padding: 5px 12px;
   }
   #header-editor h4{
     margin: 2px;
+  }
+  .wrap-search{
+    margin-left: 15px;
+    .input-search{
+      width: 260px;
+      height: 27px;
+      border-radius: 1px;
+    }
   }
 
   .container {
@@ -34,6 +45,7 @@
   main .sidebar-note {
     width: 240px;
     background-color: #f4fbf4;
+    flex: 0 0 auto;
     .inner-list-note{
       height: 100%;
       display: flex;
@@ -80,5 +92,8 @@
     }
   }
   main .main-note {
-    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow-y: auto;
   }

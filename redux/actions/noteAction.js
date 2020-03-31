@@ -15,6 +15,8 @@ export const LOAD_NOTE_BY_ID = 'LOAD_NOTE_BY_ID';
 export const UPDATE_EDITOR_STATE = 'UPDATE_EDITOR_STATE';
 export const NEW_EMPTY_NOTE = 'NEW_EMPTY_NOTE';
 export const ACTIVE_NOTE_SIDEBAR = 'ACTIVE_NOTE_SIDEBAR';
+export const SET_SEARCH = 'SET_SEARCH';
+export const UNSET_SEARCH = 'UNSET_SEARCH';
 
 export const [
   loadListNote,
@@ -31,6 +33,8 @@ export const [
   updateEditorState,
   newEmptyNote,
   activeNoteSidebar,
+  setSearch,
+  unsetSearch,
   ] = [
   createAction(LOAD_LIST_NOTE),
   createAction(UPDATE_LIST_NOTE),
@@ -46,5 +50,7 @@ export const [
   createAction(UPDATE_EDITOR_STATE),
   createAction(NEW_EMPTY_NOTE),
   createAction(ACTIVE_NOTE_SIDEBAR),
+  createAction(SET_SEARCH),
+  createAction(UNSET_SEARCH),
 ];
 

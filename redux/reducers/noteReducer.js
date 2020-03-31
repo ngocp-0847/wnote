@@ -3,15 +3,21 @@ import {UPDATE_LIST_NOTE,
     FILL_NOTE_ACTIVE,
     CHANGE_STATUS_FOR_SAVE,
     UPDATE_EDITOR_STATE,
+    SET_SEARCH,
+    UNSET_SEARCH,
 } from '../actions/noteAction';
 import { findIndex } from 'lodash';
 import update from 'immutability-helper';
 import {EditorState} from 'draft-js';
 
 const noteReducer = (state =
-  {value: 0, notes: [], noteActive: {}, shouldSave: false, editorState: EditorState.createEmpty()}, action) => {
+  {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {}, shouldSave: false, editorState: EditorState.createEmpty()}, action) => {
   console.log('noteReducer:', action.type)
   switch (action.type) {
+    case UNSET_SEARCH:
+      return {...state, isSearch: false, textSearch: ''};
+    case SET_SEARCH:
+      return {...state, isSearch: true, textSearch: action.payload};
     case UPDATE_LIST_NOTE:
       return {...state, notes: action.payload};
     case UPDATE_ITEM_LIST:

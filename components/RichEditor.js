@@ -1,7 +1,7 @@
 import React from 'react';
-import {Editor, EditorState, RichUtils, Entity, AtomicBlockUtils,
+import {Editor, EditorState, ContentState, RichUtils, Entity, AtomicBlockUtils,
   Modifier, DefaultDraftBlockRenderMap, genKey ,
-  getDefaultKeyBinding, KeyBindingUtil
+  getDefaultKeyBinding, KeyBindingUtil, convertFromHTML,
 } from 'draft-js';
 
 import CodeUtils from '../draft-js-code/lib';
@@ -10,8 +10,9 @@ import CodeBlock from './CodeBlock';
 import {getCurrentBlock} from '../components/utils/editor';
 import {addBlock, addAtomicBlock, addBlockWithKey} from '../components/utils/modifiers';
 import {getAllBlocks, insertBlockAfterKey} from '../components/utils';
+import {createWithContent, appendBlocks} from '../components/decorator';
 
-import { Map } from 'immutable';
+import {Map,OrderedSet} from 'immutable';
 
 const ACCEPTED_MIMES_FOR_PASTE = [
   'image/png',
@@ -21,6 +22,7 @@ const ACCEPTED_MIMES_FOR_PASTE = [
 
 const newBlockRenderMap = Map({
 });
+
 const extendedBlockRenderMap = DefaultDraftBlockRenderMap.merge(newBlockRenderMap);
 
 const {hasCommandModifier} = KeyBindingUtil;
@@ -88,15 +90,71 @@ export class RichEditor extends React.Component {
     if (command === 'myeditor-save') {
       return 'handled';
     }
-    return 'not-handled';
+    if (command == 'backspace') {
+      const editorState = this.props.editorState;
+      const currentBlock = getCurrentBlock(editorState);
+      console.log('handleKeyCommand:backspace:', currentBlock);
+      if (currentBlock) {
+        const contentState = editorState.getCurrentContent();
+        const selectionState = editorState.getSelection();
 
-    // const { editorState } = this.props;
-    // const newState = RichUtils.handleKeyCommand(editorState, command);
-    // if (newState) {
-    //   this.onChange(newState);
-    //   return true;
-    // }
-    // return false;
+        const entityImage = currentBlock.getCharacterList().find(cm => {
+          const entityKey = cm.getEntity();
+          console.log('handleKeyCommand:getCharacterList:', cm);
+          if (entityKey) {
+            console.log('handleKeyCommand:entityKey:', cm, contentState.getEntity(entityKey).getType());
+          }
+          return entityKey && contentState.getEntity(entityKey).getType() == 'IMAGE';
+        });
+
+        if (entityImage) {
+          const entityKey = entityImage.getEntity();
+          const entityInstance = contentState.getEntity(entityKey);
+          console.log('handleKeyCommand:entityImage:', entityInstance);
+          console.log('handleKeyCommand:entityImage:getStartOffset:',
+            selectionState.getStartOffset(),
+            selectionState.getFocusOffset(),
+            selectionState.getAnchorOffset(),
+            selectionState.getAnchorKey(),
+            selectionState.getFocusKey(),
+            currentBlock.getLength()
+            );
+          const withoutAtomicEntity = Modifier.removeRange(
+            contentState,
+            new SelectionState({
+              anchorKey: currentBlock.getKey(),
+              anchorOffset: selectionState.getAnchorOffset(),
+              focusKey: currentBlock.getKey(),
+              focusOffset: selectionState.getAnchorOffset() + entityInstance.size,
+            }),
+            'backward',
+          );
+          // const blockMap = withoutAtomicEntity.getBlockMap().delete(currentBlock.getKey());
+          // var withoutAtomic = withoutAtomicEntity.merge({
+          //   blockMap,
+          //   selectionAfter: selectionState,
+          // });
+
+          let newEditorState = EditorState.push(
+            editorState,
+            withoutAtomicEntity,
+            'remove-range',
+          );
+
+          this.onChange(newEditorState);
+          return 'handled';
+        }
+      }
+    }
+    let newState = RichUtils.handleKeyCommand(this.props.editorState, command)
+
+    if (newState) {
+      console.log('handleKeyCommand:newState:', newState);
+      this.onChange(newState);
+      return 'handled';
+    }
+
+    return 'not-handled';
   };
   onTab = (evt) => {
     const { editorState } = this.props;
@@ -115,40 +173,58 @@ export class RichEditor extends React.Component {
   };
   myBlockRenderer = block => {
     const type = block.getType();
-    if (block.getType() === 'atomic') {
+    console.log('myBlockRenderer:getEntityAt:', block.getType(), block, block.getEntityAt(0));
+    if (block.getType() === 'atomic' && block.getEntityAt(0)) {
       return {
         component: Atomic,
-        editable: true,
+        editable: false,
       };
     }
 
     return null;
   };
+
   handlePastedText = (text, html, editorState) => {
-    const blockMapTextPaste = ContentState.createFromText(text.trim()).blockMap;
     const contentState = editorState.getCurrentContent();
     const blockMap = contentState.getBlockMap();
     const selectionState = editorState.getSelection();
     const currentBlock = getCurrentBlock(editorState);
-    console.log('handlePasteListText:', blockMapTextPaste.toJS())
 
     if (currentBlock.getType() == 'code-block') {
+      const blockMapTextPaste = ContentState.createFromText(text.trim()).blockMap;
+      console.log('handlePasteListText:blockMapTextPaste:', blockMapTextPaste.toJS())
       let editorState = this.props.editorState;
       editorState = insertBlockAfterKey(editorState, currentBlock.getKey(), blockMapTextPaste)
-      console.log('after add Block:', getAllBlocks(editorState).toJS());
+      console.log('handlePastedText:addBlock:', getAllBlocks(editorState).toJS());
       this.onChange(editorState);
-      console.log('return true');
       return true;
     } else {
-      var newState = Modifier.replaceWithFragment(
-        this.props.editorState.getCurrentContent(),
-        this.props.editorState.getSelection(),
-        blockMap
-      );
-      newState = EditorState.push(this.props.editorState, newState, 'insert-fragment');
+      console.log('handlePastedText:beforeConvert:', text, html);
+      if (html) {
+        const blocksFromHTML = convertFromHTML(html);
+        const state = ContentState.createFromBlockArray(
+          blocksFromHTML.contentBlocks,
+          blocksFromHTML.entityMap,
+        );
+        this.onChange(appendBlocks(editorState, blocksFromHTML.contentBlocks, blocksFromHTML.entityMap));
+        console.log('handlePastedText:blocksFromHTML:', state, blocksFromHTML, html);
+        return true;
+      } else {
+        let newContentState = Modifier.replaceText(
+          contentState,
+          selectionState,
+          text
+        )
+        let newEditorState = EditorState.push(
+          editorState,
+          newContentState,
+          'insert-text'
+        );
+
+        this.onChange(newEditorState);
+        return true;
+      }
     }
-    this.onChange(newState);
-    return true;
   };
   render() {
     const { editorState } = this.props;
@@ -186,7 +262,7 @@ export class RichEditor extends React.Component {
             onTab={this.onTab}
             placeholder="Write note..."
             ref="editor"
-            spellCheck={true}
+            spellCheck={false}
             // plugins={[codeEditorPlugin]}
           />
         </div>
@@ -239,6 +315,7 @@ export class RichEditor extends React.Component {
 
               .RichEditor-editor .public-DraftStyleDefault-pre pre {
                 // white-space: normal;
+                margin: 8px 0px;
               }
 
               .RichEditor-controls {
@@ -267,13 +344,7 @@ export class RichEditor extends React.Component {
 }
 // Custom overrides for "code" style.
 const styleMap = {
-  // CODE: {
-  //   backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  //   fontFamily: '"Inconsolata", "Menlo", "Consolas", monospace',
-  //   fontSize: 12,
-  //   padding: 2,
-  //   margin: 2,
-  // },
+
 };
 function getBlockStyle(block) {
   switch (block.getType()) {
@@ -318,10 +389,16 @@ const BLOCK_TYPES = [
 const BlockStyleControls = props => {
   const { editorState } = props;
   const selection = editorState.getSelection();
-  const blockType = editorState
+  const block = editorState
     .getCurrentContent()
-    .getBlockForKey(selection.getStartKey())
-    .getType();
+    .getBlockForKey(selection.getStartKey());
+
+  let blockType = null;
+
+  if (block) {
+    blockType = block.getType();
+  }
+
   return (
     <div className="RichEditor-controls">
       {BLOCK_TYPES.map(type =>
@@ -343,7 +420,19 @@ var INLINE_STYLES = [
   { label: 'Monospace', style: 'CODE' },
 ];
 const InlineStyleControls = props => {
-  var currentStyle = props.editorState.getCurrentInlineStyle();
+  const { editorState } = props;
+  const selection = editorState.getSelection();
+  const block = editorState
+    .getCurrentContent()
+    .getBlockForKey(selection.getStartKey());
+
+  let currentStyle = OrderedSet();
+
+  if (block) {
+    currentStyle = editorState.getCurrentInlineStyle();
+  }
+
+  console.log('InlineStyleControls:currentStyle', currentStyle);
   return (
     <div className="RichEditor-controls">
       {INLINE_STYLES.map(type =>

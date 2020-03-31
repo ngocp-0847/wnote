@@ -3,7 +3,7 @@ import Layout from '../../components/layout.js';
 import React, { Component } from 'react';
 import NoSSR from 'react-no-ssr';
 import { RichEditor } from '../../components/RichEditor';
-import {EditorState, ContentState, convertToRaw} from 'draft-js';
+import {EditorState, convertToRaw} from 'draft-js';
 import Router, { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
 import {loadListNote,
@@ -12,7 +12,9 @@ import {loadListNote,
   loadNoteById,
   updateEditorState,
   newEmptyNote,
-  activeNoteSidebar
+  activeNoteSidebar,
+  setSearch,
+  unsetSearch
 } from '../../redux/actions/noteAction';
 import classNames from 'classnames';
 
@@ -26,21 +28,23 @@ class WID extends Component {
     this.props.loadNoteById({noteID: this.props.router.query.id})
   }
   getContentForShortext = (editorState) => {
-    var contentState = editorState.getCurrentContent();
-    var arrBlocks = contentState.getBlocksAsArray();
-    var shortText = null;
-    var shortImage = null;
+    let contentState = editorState.getCurrentContent();
+    let arrBlocks = contentState.getBlocksAsArray();
+    let shortText = null;
+    let shortImage = null;
 
     arrBlocks.forEach((block, key) => {
-      var text = block.getText();
+      let text = block.getText().trim().substr(0, 100);
 
       if (shortImage == null && block.getType() == 'atomic') {
-        var blockKey = block.getEntityAt(0)
-        const blockImage = contentState.getEntity(blockKey);
-        shortImage = blockImage.getData();
+        let blockKey = block.getEntityAt(0);
+        if (blockKey) {
+          const blockImage = contentState.getEntity(blockKey);
+          shortImage = blockImage.getData();
+        }
       }
-      if (shortText == null && text.trim() != '') {
-        shortText = block.getText()
+      if (shortText == null && text != '') {
+        shortText = text
       }
       if (shortImage != null && shortText != null) {
         return false;
@@ -57,10 +61,12 @@ class WID extends Component {
   onChange = (editorState) => {
       if (this.props.shouldSave) {
         var shortContent = this.getContentForShortext(editorState)
+        var rawTextSearch = editorState.getCurrentContent().getPlainText();
         var body = {
             'content': JSON.stringify(convertToRaw(editorState.getCurrentContent())),
             'shortContent': shortContent,
             'userID': localStorage.getItem('userID'),
+            'rawTextSearch': rawTextSearch,
             'createdAt': new Date().getTime(),
             'updatedAt': new Date().getTime(),
         }
@@ -76,9 +82,21 @@ class WID extends Component {
 
     this.props.loadListNote(localStorage.getItem('userID'))
   }
+
   activeNoteSidebar = (note) => {
     this.props.activeNoteSidebar(note)
   };
+
+  search = (e) => {
+    let eventText = e.target.value.trim();
+    console.log('search:components:', eventText);
+    if (eventText != '') {
+      this.props.setSearch(eventText);
+    } else {
+      this.props.unsetSearch();
+    }
+  };
+
   render() {
     return (
       <main>
@@ -112,6 +130,9 @@ class WID extends Component {
           <div id="header-editor">
             <h4 id="title-note">Editor</h4>
             <button id="btn-n-note" onClick={this.onNewNote}>New</button>
+            <div className="wrap-search">
+              <input name="input-search" className="input-search" placeholder="Search" onChange={this.search} />
+            </div>
           </div>
           <NoSSR>
             <div className="editor">
@@ -147,6 +168,8 @@ const mapDispatchToProps = {
   updateEditorState: updateEditorState,
   newEmptyNote: newEmptyNote,
   activeNoteSidebar: activeNoteSidebar,
+  setSearch: setSearch,
+  unsetSearch: unsetSearch,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));
