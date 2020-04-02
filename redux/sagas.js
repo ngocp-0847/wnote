@@ -127,6 +127,7 @@ function* fnNewEmptyNote() {
     'userID': localStorage.getItem('userID'),
     'createdAt': new Date().getTime(),
     'updatedAt': new Date().getTime(),
+    'deletedAt': null,
   };
 
   const noteSaved = yield call([noteService, 'fnSaveNote'], noteID, body);
@@ -136,7 +137,8 @@ function* fnNewEmptyNote() {
 }
 
 function* fnLoadNoteById({ payload }) {
-  const data = yield request('/api/note/'+payload.noteID, {
+  var userID = localStorage.getItem('userID');
+  const data = yield request('/api/note/'+payload.noteID+'?userID='+userID, {
     method: 'GET', // *GET, POST, PUT, DELETE, etc.
     mode: 'cors', // no-cors, *cors, same-origin
     cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
@@ -157,6 +159,8 @@ function* fnLoadNoteById({ payload }) {
       yield put(updateEditorState(editorState));
     } catch(e) {
       console.log('fnLoadNoteById:catch:', e);
+      var editorState = EditorState.createEmpty();
+      yield put(updateEditorState(editorState));
     }
   }
 
@@ -192,10 +196,6 @@ function* fnUnSearch() {
   yield* fnLoadListNote({payload: userID});
 }
 
-function* findStateLoadNoteLatest({ payload }) {
-
-}
-
 function* fnDeleteNote({ payload }) {
   console.log('fnDeleteNote:',payload);
   let userID = localStorage.getItem('userID');
@@ -207,7 +207,14 @@ function* fnDeleteNote({ payload }) {
   console.log('fnDeleteNote:results:', results);
   if (results.code == 200) {
     yield put(removeFromList(results.data.body._id));
-    yield* fnLoadNoteLastest({payload: userID});
+    const noteLatestState = yield select((state) => {
+      if (state.note.notes.length > 0) return state.note.notes[0];
+      return null;
+    });
+    console.log('fnDeleteNote:noteLatestState:', noteLatestState);
+    if (noteLatestState) {
+      yield* fnLoadNoteById({payload: {noteID: noteLatestState._id}});
+    }
   }
 }
 

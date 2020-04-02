@@ -35,8 +35,11 @@ const noteReducer = (state =
         return note._id == action.payload._id;
       });
       if (indexNoteActive != -1) {
-        var newArrNotes = update(state.notes, {[indexNoteActive]: {$set: action.payload}})
-        var noteActive = Object.assign({}, state.notes[indexNoteActive])
+        const oldItem = state.notes[indexNoteActive];
+        const newItem = update(oldItem, {$merge: action.payload});
+        let newArrNotes = update(state.notes, {$splice: [[indexNoteActive,1]]});
+        newArrNotes = update(newArrNotes, {$unshift: [newItem]});
+        let noteActive = Object.assign({}, state.notes[indexNoteActive]);
         return {...state, notes: newArrNotes, noteActive: noteActive};
       } else {
         newArrNotes = update(state.notes, {$unshift: [action.payload]})

@@ -47,12 +47,18 @@ export default (req, res) => {
         }
     });
   } else if (req.method == 'GET') {
-    const { id } = req.query;
+    const { id, userID } = req.query;
+    console.log('GET notedetail:', id, userID)
     client.search({
       index: 'wnote',
       body: {
         query: {
-          match: {_id: id}
+          bool: {
+            must: [
+              {match: {_id: id}},
+              {match: {userID: userID}}
+            ]
+          }
         },
       }
     },function(error, response, status) {

@@ -27,6 +27,8 @@ class WID extends Component {
       this.props.routeChangeComplete(url)
     });
 
+    this.state = {eventText: ''};
+
     this.props.loadNoteById({noteID: this.props.router.query.id})
   }
   getContentForShortext = (editorState) => {
@@ -73,12 +75,16 @@ class WID extends Component {
     }
     this.props.startSaveNote([this.props.router.query.id, body])
   };
-  debouncePush = debounce(this.pushToService, 1000);
+  debouncePush = debounce(this.pushToService, 300);
 
   onChange = (editorState) => {
       if (this.props.shouldSave) {
+        const newContent = editorState.getCurrentContent();
+        const oldContent = this.props.editorState.getCurrentContent();
+        if (!newContent.equals(oldContent)) {
+          this.debouncePush();
+        }
         this.props.updateEditorState(editorState);
-        this.debouncePush();
       }
   };
 
@@ -93,15 +99,21 @@ class WID extends Component {
   activeNoteSidebar = (note) => {
     this.props.activeNoteSidebar(note)
   };
-
-  search = (e) => {
-    let eventText = e.target.value.trim();
-    console.log('search:components:', eventText);
+  debounceSearch = debounce(() => {
+    let eventText = this.state.eventText;
+    console.log('search:debounceSearch:', eventText);
     if (eventText != '') {
       this.props.setSearch(eventText);
     } else {
       this.props.unsetSearch();
     }
+  }, 300);
+
+  search = (e) => {
+    let eventText = e.target.value.trim();
+    console.log('search:components:', eventText);
+    this.setState({eventText: eventText});
+    this.debounceSearch();
   };
 
   deleteNote = (e) => {
