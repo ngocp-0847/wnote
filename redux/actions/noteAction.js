@@ -17,6 +17,8 @@ export const NEW_EMPTY_NOTE = 'NEW_EMPTY_NOTE';
 export const ACTIVE_NOTE_SIDEBAR = 'ACTIVE_NOTE_SIDEBAR';
 export const SET_SEARCH = 'SET_SEARCH';
 export const UNSET_SEARCH = 'UNSET_SEARCH';
+export const DELETE_NOTE = 'DELETE_NOTE';
+export const REMOVE_FROM_LIST = 'REMOVE_FROM_LIST';
 
 export const [
   loadListNote,
@@ -35,6 +37,8 @@ export const [
   activeNoteSidebar,
   setSearch,
   unsetSearch,
+  deleteNote,
+  removeFromList,
   ] = [
   createAction(LOAD_LIST_NOTE),
   createAction(UPDATE_LIST_NOTE),
@@ -52,5 +56,7 @@ export const [
   createAction(ACTIVE_NOTE_SIDEBAR),
   createAction(SET_SEARCH),
   createAction(UNSET_SEARCH),
+  createAction(DELETE_NOTE),
+  createAction(REMOVE_FROM_LIST),
 ];
 

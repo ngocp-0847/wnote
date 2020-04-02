@@ -14,6 +14,8 @@ import {
   activeNoteSidebar,
   setSearch,
   unsetSearch,
+  deleteNote,
+  removeFromList,
 } from './actions/noteAction';
 import noteService from './services/noteService.js'
 import {EditorState, convertFromRaw} from 'draft-js';
@@ -93,16 +95,20 @@ function* fnLoadNoteLastest() {
         referrerPolicy: 'no-referrer', // no-referrer, *client
         body: JSON.stringify(body) // body data type must match "Content-Type" header
     });
-
-    var hits = data.hits;
-    if (hits.length != 0) {
-      noteID = hits[0]._id
-      yield put(fillNoteActive(hits[0]));
-      const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-      yield put(changeStatusForSave(true));
-    } else {
-      const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-      yield put(changeStatusForSave(true));
+    console.log('fnLoadNoteLastest:request:', data)
+    if (data.code == 200) {
+      let rawdata = data.data;
+      var hits = rawdata.hits;
+      if (hits.length != 0) {
+        noteID = hits[0]._id
+        console.log('fnLoadNoteLastest:hits:', hits, noteID);
+        yield put(fillNoteActive(hits[0]));
+        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+        yield put(changeStatusForSave(true));
+      } else {
+        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+        yield put(changeStatusForSave(true));
+      }
     }
   }
 }
@@ -145,9 +151,13 @@ function* fnLoadNoteById({ payload }) {
 
   if (data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
-    const state = convertFromRaw(JSON.parse(data.hits[0]._source.content));
-    var editorState = createWithContent(state);
-    yield put(updateEditorState(editorState));
+    try {
+      const state = convertFromRaw(JSON.parse(data.hits[0]._source.content));
+      var editorState = createWithContent(state);
+      yield put(updateEditorState(editorState));
+    } catch(e) {
+      console.log('fnLoadNoteById:catch:', e);
+    }
   }
 
   yield put(changeStatusForSave(true));
@@ -176,13 +186,30 @@ function* fnSearch({ payload }) {
   }
 }
 
-
 function* fnUnSearch() {
   console.log('fnUnSearch');
   var userID = localStorage.getItem('userID');
   yield* fnLoadListNote({payload: userID});
 }
 
+function* findStateLoadNoteLatest({ payload }) {
+
+}
+
+function* fnDeleteNote({ payload }) {
+  console.log('fnDeleteNote:',payload);
+  let userID = localStorage.getItem('userID');
+  let body = {
+    userID: localStorage.getItem('userID'),
+    noteID: payload,
+  }
+  const results = yield call([noteService, 'deleteNote'], body);
+  console.log('fnDeleteNote:results:', results);
+  if (results.code == 200) {
+    yield put(removeFromList(results.data.body._id));
+    yield* fnLoadNoteLastest({payload: userID});
+  }
+}
 
 // notice how we now only export the rootSaga
 // single entry point to start all Sagas at once
@@ -197,5 +224,6 @@ export default function* rootSaga() {
     takeLatest(activeNoteSidebar().type, fnActiveNoteSidebar),
     takeLatest(setSearch().type, fnSearch),
     takeLatest(unsetSearch().type, fnUnSearch),
+    takeLatest(deleteNote().type, fnDeleteNote),
   ])
 }

@@ -1,5 +1,6 @@
 const { Client } = require('@elastic/elasticsearch')
 const client = new Client({ node: 'http://localhost:9200' })
+import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from './util';
 
 export default (req, res) => {
   if (req.method === 'POST') {
@@ -9,7 +10,16 @@ export default (req, res) => {
       type: 'note',
       body: {
         query: {
-          match: {userID: userID},
+          bool: {
+            must: [
+              {match: {userID: userID}}
+            ],
+            must_not: {
+              exists: {
+                field: 'deletedAt'
+              }
+            }
+          }
         },
         sort: {
           updatedAt: {order: 'desc'},
@@ -19,6 +29,7 @@ export default (req, res) => {
       }
     },function (error, response, status) {
         if (error){
+          responseError(res, error);
           console.log("search error: "+error)
         }
         else {

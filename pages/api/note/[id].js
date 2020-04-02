@@ -1,27 +1,37 @@
-const { Client } = require('@elastic/elasticsearch')
-const client = new Client({ node: 'http://localhost:9200' })
-
-const fnBuildResponse = (id, body) => {
-  var response = {
-    _index: 'wnote',
-    _id: id,
-    _type: 'note',
-    _source: body,
-  }
-
-  return response
-}
+const { Client } = require('@elastic/elasticsearch');
+const client = new Client({ node: 'http://localhost:9200' });
+import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
 
 export default (req, res) => {
-  if (req.method === 'POST') {
+  console.log('api:[id]:', req.method, req.body);
+  if (req.method === 'DELETE') {
+    client.update({
+      index: 'wnote',
+      type: 'note',
+      id: req.body.noteID,
+      body: {
+        // put the partial document under the `doc` key
+        doc: {deletedAt: Date.now()}
+      }
+    }, function (error, response) {
+      if (error){
+        responseError(res, error);
+        console.log("index error: "+error)
+      } else {
+        responseSuccess(res, response);
+      }
+    });
+
+  } else if (req.method === 'POST') {
     const { id } = req.query;
     client.index({
       index: 'wnote',
       id: id,
       type: 'note',
-      body: req.body
+      body: fnWrapDeletedAt(req.body)
     },function(error, response, status) {
         if (error){
+          responseError(res, error);
           console.log("index error: "+error)
         } else {
           res.statusCode = 200
@@ -47,6 +57,7 @@ export default (req, res) => {
       }
     },function(error, response, status) {
         if (error){
+          responseError(res, error);
           console.log("index error: "+error)
         } else {
           res.statusCode = 200

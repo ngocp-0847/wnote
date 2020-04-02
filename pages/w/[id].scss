@@ -1,99 +1,112 @@
 #header-editor{
-    padding: 3px;
-    margin: 10px;
-    display: flex;
-    flex-direction: row;
+  padding: 3px;
+  margin: 10px;
+  display: flex;
+  flex-direction: row;
+  h4{
+    margin: 2px;
   }
-  #header-editor #btn-n-note{
+  #btn-n-note{
     align-self: center;
     border-radius: 3px;
     margin: 0px 5px;
     padding: 5px 12px;
+    cursor: pointer;
   }
-  #header-editor h4{
-    margin: 2px;
-  }
-  .wrap-search{
-    margin-left: 15px;
-    .input-search{
-      width: 260px;
-      height: 27px;
-      border-radius: 1px;
+  #con-r{
+    #btn-d-no{
+      align-self: center;
+      border-radius: 3px;
+      margin: 0px 5px;
+      padding: 5px 12px;
+      background-color: #e79a7f;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
     }
   }
+}
 
-  .container {
+.wrap-search{
+  margin-left: 15px;
+  .input-search{
+    width: 260px;
+    height: 27px;
+    border-radius: 1px;
+  }
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-content: stretch;
+  height: 100%;
+  width: 100%;
+}
+// main .sidebar-pin{
+//   height: 100%;
+//   width: 170px;
+//   background-color: blue;
+// }
+main .sidebar-note {
+  width: 240px;
+  background-color: #f4fbf4;
+  flex: 0 0 auto;
+  .inner-list-note{
+    height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-
-  main {
-    flex: 1;
-    display: flex;
-    flex-direction: row;
-    align-content: stretch;
-    height: 100%;
-    width: 100%;
-  }
-  // main .sidebar-pin{
-  //   height: 100%;
-  //   width: 170px;
-  //   background-color: blue;
-  // }
-  main .sidebar-note {
-    width: 240px;
-    background-color: #f4fbf4;
-    flex: 0 0 auto;
-    .inner-list-note{
+    #header-ln{
+      background-color: #ededed;
+      margin-top: 0px;
+      margin-bottom: 0px;
+      padding: 10px;
+    }
+    .wr-hei-note{
+      flex: 1;
       height: 100%;
       display: flex;
       flex-direction: column;
-      #header-ln{
-        background-color: #ededed;
-        margin-top: 0px;
-        margin-bottom: 0px;
-        padding: 10px;
-      }
-      .wr-hei-note{
-        flex: 1;
-	      height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: scroll;
-        .list-note{
-          .active{
-            background-color: #ade5cd;
+      overflow: scroll;
+      .list-note{
+        .active{
+          background-color: #ade5cd;
+        }
+        .note-c{
+          display: flex;
+          flex-direction: row;
+          min-height: 69px;
+          border-top: 1px solid #c0c0c0;
+          padding-top: 2px;
+          padding-left: 2px;
+          font-size: 14px;
+          .text{
+            padding: 2px;
           }
-          .note-c{
-            display: flex;
-            flex-direction: row;
-            min-height: 69px;
-            border-top: 1px solid #c0c0c0;
-            padding-top: 2px;
-            padding-left: 2px;
-            font-size: 14px;
-            .text{
-              padding: 2px;
-              width: 122px;
-            }
-            .image-s{
-              width: 50px;
-              height: 20px;
-              img{
-                width: 100px;
-                height: 63px;
-              }
+          .image-s{
+            width: 50px;
+            height: 20px;
+            img{
+              width: 100px;
+              height: 63px;
             }
           }
         }
       }
     }
   }
-  main .main-note {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    overflow-y: auto;
-  }
+}
+main .main-note {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}

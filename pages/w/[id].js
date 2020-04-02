@@ -14,9 +14,11 @@ import {loadListNote,
   newEmptyNote,
   activeNoteSidebar,
   setSearch,
-  unsetSearch
+  unsetSearch,
+  deleteNote,
 } from '../../redux/actions/noteAction';
 import classNames from 'classnames';
+import {debounce} from 'lodash';
 
 class WID extends Component {
   constructor(props) {
@@ -57,21 +59,26 @@ class WID extends Component {
   onNewNote = () => {
     this.props.newEmptyNote();
   };
+  pushToService = () => {
+    const editorState = this.props.editorState;
+    var shortContent = this.getContentForShortext(editorState);
+    var rawTextSearch = editorState.getCurrentContent().getPlainText();
+    var body = {
+        'content': JSON.stringify(convertToRaw(editorState.getCurrentContent())),
+        'shortContent': shortContent,
+        'userID': localStorage.getItem('userID'),
+        'rawTextSearch': rawTextSearch,
+        'createdAt': new Date().getTime(),
+        'updatedAt': new Date().getTime(),
+    }
+    this.props.startSaveNote([this.props.router.query.id, body])
+  };
+  debouncePush = debounce(this.pushToService, 1000);
 
   onChange = (editorState) => {
       if (this.props.shouldSave) {
-        var shortContent = this.getContentForShortext(editorState)
-        var rawTextSearch = editorState.getCurrentContent().getPlainText();
-        var body = {
-            'content': JSON.stringify(convertToRaw(editorState.getCurrentContent())),
-            'shortContent': shortContent,
-            'userID': localStorage.getItem('userID'),
-            'rawTextSearch': rawTextSearch,
-            'createdAt': new Date().getTime(),
-            'updatedAt': new Date().getTime(),
-        }
         this.props.updateEditorState(editorState);
-        this.props.startSaveNote([this.props.router.query.id, body])
+        this.debouncePush();
       }
   };
 
@@ -97,7 +104,14 @@ class WID extends Component {
     }
   };
 
+  deleteNote = (e) => {
+    this.props.deleteNote(this.props.noteActive._id);
+  };
+
   render() {
+    const styleNotImage = {maxWidth: '100%'};
+    const styleHasImage = {maxWidth: '122px'};
+
     return (
       <main>
         <div className="sidebar-note">
@@ -107,9 +121,16 @@ class WID extends Component {
               <div className="list-note">
                   {
                     this.props.notes.map((note, i) => {
+
+                      let styleText = styleNotImage;
+                      if (note._source.shortContent && note._source.shortContent.shortImage) {
+                        styleText = styleHasImage;
+                      }
+
                       return (
-                        <div key={i} className={classNames({'note-c': true, 'active': note._id == this.props.noteActive._id})} onClick={this.activeNoteSidebar.bind(this, note)}>
-                          <div className="text">{note._source.shortContent ? note._source.shortContent.shortText : ''}</div>
+                        <div key={i} className={classNames({'note-c': true, 'active': note._id == this.props.noteActive._id})}
+                          onClick={this.activeNoteSidebar.bind(this, note)}>
+                          <div style={styleText} className="text">{note._source.shortContent ? note._source.shortContent.shortText : ''}</div>
                           {
                             (note._source.shortContent && note._source.shortContent.shortImage) &&
                             (
@@ -128,10 +149,12 @@ class WID extends Component {
         </div>
         <div className="main-note">
           <div id="header-editor">
-            <h4 id="title-note">Editor</h4>
             <button id="btn-n-note" onClick={this.onNewNote}>New</button>
             <div className="wrap-search">
               <input name="input-search" className="input-search" placeholder="Search" onChange={this.search} />
+            </div>
+            <div id="con-r">
+              <button id="btn-d-no" onClick={this.deleteNote}>Delete</button>
             </div>
           </div>
           <NoSSR>
@@ -170,6 +193,7 @@ const mapDispatchToProps = {
   activeNoteSidebar: activeNoteSidebar,
   setSearch: setSearch,
   unsetSearch: unsetSearch,
+  deleteNote: deleteNote,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));

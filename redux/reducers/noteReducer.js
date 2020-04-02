@@ -5,6 +5,7 @@ import {UPDATE_LIST_NOTE,
     UPDATE_EDITOR_STATE,
     SET_SEARCH,
     UNSET_SEARCH,
+    REMOVE_FROM_LIST,
 } from '../actions/noteAction';
 import { findIndex } from 'lodash';
 import update from 'immutability-helper';
@@ -14,6 +15,15 @@ const noteReducer = (state =
   {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {}, shouldSave: false, editorState: EditorState.createEmpty()}, action) => {
   console.log('noteReducer:', action.type)
   switch (action.type) {
+    case REMOVE_FROM_LIST:
+      var indexNoteActive = findIndex(state.notes, (note) => {
+        return note._id == action.payload;
+      });
+      if (indexNoteActive != -1) {
+        var newNotes = update(state.notes, {$splice: [[indexNoteActive, 1]]});
+        return {...state, notes: newNotes};
+      }
+      return {...state};
     case UNSET_SEARCH:
       return {...state, isSearch: false, textSearch: ''};
     case SET_SEARCH:

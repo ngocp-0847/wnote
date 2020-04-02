@@ -1,5 +1,6 @@
 const { Client } = require('@elastic/elasticsearch')
 const client = new Client({ node: 'http://localhost:9200' })
+import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
 
 export default (req, res) => {
   if (req.method === 'POST') {
@@ -8,7 +9,16 @@ export default (req, res) => {
       index: 'wnote',
       body: {
         query: {
-          match: {userID: req.body.userID}
+          bool: {
+            must: [
+              {match: {userID: req.body.userID}}
+            ],
+            must_not: {
+              exists: {
+                field: 'deletedAt'
+              }
+            }
+          }
         },
         from: 0,
         size: 1,
@@ -18,11 +28,10 @@ export default (req, res) => {
       }
     },function(error, response, status) {
         if (error){
+          responseError(res, error);
           console.log("index error: "+error)
         } else {
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.status(200).json(response.body.hits)
+          responseSuccess(res, response.body.hits);
         }
     });
   }
