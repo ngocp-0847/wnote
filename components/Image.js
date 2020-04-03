@@ -26,13 +26,15 @@ export default class Image extends Component {
     const combinedClassName = clsx(theme.image, className);
     const { src } = contentState.getEntity(block.getEntityAt(0)).getData();
     return (
-      <img
-        style={styles.width}
-        {...elementProps}
-        src={src}
-        role="presentation"
-        className={combinedClassName}
-      />
+      <span className="entity-img" data-offset-key={offsetKey}>
+        <img
+          style={styles.width}
+          {...elementProps}
+          src={src}
+          role="presentation"
+          className={combinedClassName}
+        />
+      </span>
     );
   }
 }

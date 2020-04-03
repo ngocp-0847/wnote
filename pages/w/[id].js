@@ -31,6 +31,7 @@ class WID extends Component {
 
     this.props.loadNoteById({noteID: this.props.router.query.id})
   }
+
   getContentForShortext = (editorState) => {
     let contentState = editorState.getCurrentContent();
     let arrBlocks = contentState.getBlocksAsArray();
@@ -39,13 +40,22 @@ class WID extends Component {
 
     arrBlocks.forEach((block, key) => {
       let text = block.getText().trim().substr(0, 100);
-
-      if (shortImage == null && block.getType() == 'atomic') {
-        let blockKey = block.getEntityAt(0);
-        if (blockKey) {
-          const blockImage = contentState.getEntity(blockKey);
-          shortImage = blockImage.getData();
-        }
+      if (shortImage == null) {
+        block.findEntityRanges(
+          (character) => {
+              if (character.getEntity() !== null) {
+                  const entity = contentState.getEntity(character.getEntity());
+                  if (shortImage == null && entity && entity.getType() === 'IMAGE') {
+                      const entityInstance = contentState.getEntity(character.getEntity());
+                      shortImage = entityInstance.getData();
+                      return true;
+                  }
+              }
+              return false;
+          },
+          (start, end) => {
+          }
+        );
       }
       if (shortText == null && text != '') {
         shortText = text

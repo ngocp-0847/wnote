@@ -8,8 +8,8 @@ import CodeUtils from '../draft-js-code/lib';
 import Atomic from './Atomic';
 import CodeBlock from './CodeBlock';
 import {getCurrentBlock} from '../components/utils/editor';
-import {addBlock, addAtomicBlock, addBlockWithKey} from '../components/utils/modifiers';
-import {getAllBlocks, insertBlockAfterKey} from '../components/utils';
+import {addBlock, addAtomicBlock} from '../components/utils/modifiers';
+import {getAllBlocks, insertBlockAfterKey, getEntities} from '../components/utils';
 import {createWithContent, appendBlocks} from '../components/decorator';
 
 import {Map,OrderedSet} from 'immutable';
@@ -50,7 +50,7 @@ export class RichEditor extends React.Component {
 
   insertImageIntoEditor = (editorState, base64) => {
     const contentState = editorState.getCurrentContent()
-    const contentStateWithEntity = contentState.createEntity('image', 'IMMUTABLE', {src: base64});
+    const contentStateWithEntity = contentState.createEntity('IMAGE', 'IMMUTABLE', {src: base64});
     const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
 
     const newEditorState = AtomicBlockUtils.insertAtomicBlock(
@@ -78,6 +78,38 @@ export class RichEditor extends React.Component {
 
     return 'not-handled';
   };
+
+  handleDroppedFiles = (selection, files) => {
+    const { editorState } = this.props;
+    const anchorKey = selection.getAnchorKey();
+
+    if (files && files.length) {
+      const file = files[0];
+
+      if (ACCEPTED_MIMES_FOR_PASTE.includes(file.type)) {
+        this.readImageAsDataUrl(file, base64 => {
+          const contentState = editorState.getCurrentContent();
+          const contentStateWithEntity = contentState.createEntity('IMAGE', 'IMMUTABLE', {src: base64});
+          const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+
+          let focusOffset = selection.getFocusOffset();
+          let anchorKeyDrop = selection.getAnchorKey();
+          let blockDrop = contentState.getBlockForKey(anchorKeyDrop);
+          const contentStateWithImgDrop = Modifier.insertText(contentStateWithEntity, selection, ' ', null, entityKey);
+          console.log('handleDroppedFiles:readImageAsDataUrl:', selection);
+          const newEditorState = EditorState.push(editorState, contentStateWithImgDrop, 'apply-entity');
+          console.log('handleDroppedFiles:afterPush:', newEditorState.toJS(), contentStateWithEntity.toJS(), getEntities(newEditorState));
+
+          this.onChange(newEditorState);
+        });
+
+        return 'handled';
+      }
+    }
+
+    return 'not-handled';
+  };
+
   onChange = editorState => {
     console.log('onChange:', getAllBlocks(editorState).toJS())
     this.props.onChange(editorState);
@@ -92,12 +124,12 @@ export class RichEditor extends React.Component {
     }
     if (command == 'backspace') {
       const editorState = this.props.editorState;
+      const contentState = editorState.getCurrentContent();
+      const selectionState = editorState.getSelection();
+      if (!selectionState.isCollapsed()) return 'not-handled';
       const currentBlock = getCurrentBlock(editorState);
       console.log('handleKeyCommand:backspace:', currentBlock);
       if (currentBlock) {
-        const contentState = editorState.getCurrentContent();
-        const selectionState = editorState.getSelection();
-
         const entityImage = currentBlock.getCharacterList().find(cm => {
           const entityKey = cm.getEntity();
           console.log('handleKeyCommand:getCharacterList:', cm);
@@ -125,21 +157,19 @@ export class RichEditor extends React.Component {
               anchorKey: currentBlock.getKey(),
               anchorOffset: selectionState.getAnchorOffset(),
               focusKey: currentBlock.getKey(),
-              focusOffset: selectionState.getAnchorOffset() + entityInstance.size,
+              focusOffset: selectionState.getAnchorOffset() + 1,
             }),
             'backward',
           );
-          // const blockMap = withoutAtomicEntity.getBlockMap().delete(currentBlock.getKey());
-          // var withoutAtomic = withoutAtomicEntity.merge({
-          //   blockMap,
-          //   selectionAfter: selectionState,
-          // });
+          const targetSelection = withoutAtomicEntity.getSelectionAfter();
 
           let newEditorState = EditorState.push(
             editorState,
             withoutAtomicEntity,
             'remove-range',
           );
+
+          newEditorState = EditorState.forceSelection(newEditorState, targetSelection);
 
           this.onChange(newEditorState);
           return 'handled';
@@ -154,6 +184,16 @@ export class RichEditor extends React.Component {
       return 'handled';
     }
 
+    return 'not-handled';
+  };
+  handleDrop = (selection, dataTransfer, isInternal) => {
+    if (isInternal) {
+      dataTransfer.data.getData('blockKey');
+      dataTransfer.data.getData('start');
+      dataTransfer.data.getData('end');
+      dataTransfer.data.getData('entityKey');
+    }
+    console.log('handleDrop:',selection, dataTransfer.data.getData('block'), isInternal);
     return 'not-handled';
   };
   onTab = (evt) => {
@@ -249,6 +289,8 @@ export class RichEditor extends React.Component {
         />
         <div className={className} onClick={this.focus}>
           <Editor
+            handleDrop={this.handleDrop}
+            handleDroppedFiles={this.handleDroppedFiles}
             blockRenderMap={extendedBlockRenderMap}
             handlePastedText={this.handlePastedText}
             blockRendererFn={this.myBlockRenderer}

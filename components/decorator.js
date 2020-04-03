@@ -18,22 +18,41 @@ function findImageEntities(contentBlock, callback, contentState) {
   );
 }
 
-const Image = (props) => {
-  let {
-    height,
-    src,
-    width,
-    style,
-  } = props.contentState.getEntity(props.entityKey).getData();
-  console.log('Image:style:', style);
-  if (!style) {
-    style = {maxWidth: '100%'};
+export const Image = (props) => {
+  const {contentState, block, blockKey, start, end} = props;
+  let entityKey = null;
+  console.log('Image:decorator:', props);
+  if (block) {
+    entityKey = block.getEntityAt(0);
   } else {
-    style = Object.assign(style, {maxWidth: '100%'});
+    entityKey = props.entityKey;
   }
+
+  const handleDragStart = (event) => {
+    console.log('Image:handleDragStart:', event.dataTransfer);
+    event.dataTransfer.setData('blockKey', blockKey);
+    event.dataTransfer.setData('start', start);
+    event.dataTransfer.setData('end', end);
+    event.dataTransfer.setData('entityKey', entityKey);
+  }
+
+  let content = (<img />);
+
+  if (entityKey) {
+    const entity = contentState.getEntity(entityKey);
+    let {height, src, width, style} = entity.getData();
+    const type = entity.getType();
+    if (!style) {
+      style = {maxWidth: '100%'};
+    } else {
+      style = Object.assign(style, {maxWidth: '100%'});
+    }
+    content = (<img src={src} height={height} width={width} style={style} />);
+  }
+
   return (
-    <span className="entity-img" data-offset-key={props.offsetKey}>
-      <img src={src} height={height} width={width} style={style} />
+    <span className="entity-img" data-offset-key={props.offsetKey} draggable onDragStart={handleDragStart}>
+      {content}
     </span>
   );
 };

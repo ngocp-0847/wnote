@@ -1,4 +1,4 @@
-import Image from './Image';
+import {Image} from './decorator';
 
 const Atomic = (props) => {
     const {contentState} = props;

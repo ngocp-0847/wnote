@@ -2,6 +2,14 @@ const { Client } = require('@elastic/elasticsearch');
 const client = new Client({ node: 'http://localhost:9200' });
 import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+}
+
 export default (req, res) => {
   console.log('api:[id]:', req.method, req.body);
   if (req.method === 'DELETE') {
