@@ -1,5 +1,5 @@
 import React from 'react';
-import {Editor, EditorState, ContentState, RichUtils, Entity, AtomicBlockUtils,
+import {Editor, EditorState, ContentState, SelectionState, RichUtils, Entity, AtomicBlockUtils,
   Modifier, DefaultDraftBlockRenderMap, genKey ,
   getDefaultKeyBinding, KeyBindingUtil, convertFromHTML,
 } from 'draft-js';
@@ -82,7 +82,7 @@ export class RichEditor extends React.Component {
   handleDroppedFiles = (selection, files) => {
     const { editorState } = this.props;
     const anchorKey = selection.getAnchorKey();
-
+    console.log('handleDroppedFiles:', selection, files);
     if (files && files.length) {
       const file = files[0];
 
@@ -188,12 +188,40 @@ export class RichEditor extends React.Component {
   };
   handleDrop = (selection, dataTransfer, isInternal) => {
     if (isInternal) {
-      dataTransfer.data.getData('blockKey');
-      dataTransfer.data.getData('start');
-      dataTransfer.data.getData('end');
-      dataTransfer.data.getData('entityKey');
+      const {editorState} = this.props;
+      const contentState = editorState.getCurrentContent();
+      let blockKey = dataTransfer.data.getData('blockKey');
+      let start = parseInt(dataTransfer.data.getData('start'));
+      let end = parseInt(dataTransfer.data.getData('end'));
+      let entityKey = dataTransfer.data.getData('entityKey');
+      let selectionState = SelectionState.createEmpty('foo');
+      let removeSelection = selectionState.merge({
+        anchorKey: blockKey,
+        anchorOffset: start,
+        focusKey: blockKey,
+        focusOffset: end,
+      });
+      console.log('handleDrop:selection:', selection, removeSelection);
+      const contentStateRemove = Modifier.removeRange(contentState, removeSelection, 'backward');
+      // const selectionAfterRemove = contentStateRemove.getSelectionAfter();
+      // let newEditorState = editorState;
+      // let newEditorState = EditorState.push(
+      //   editorState,
+      //   contentStateRemove,
+      //   'remove-range',
+      // );
+
+      // newEditorState = EditorState.forceSelection(newEditorState, selectionAfterRemove);
+      console.log('handleDrop:contentStateRemove:', contentStateRemove);
+      const contentStateDrop = Modifier.insertText(contentStateRemove, selection, ' ', null, entityKey);
+
+      const newEditorState = EditorState.push(editorState, contentStateDrop, 'apply-entity');
+      setTimeout(() => {
+        this.onChange(newEditorState);
+      }, 0);
+      return 'handled';
     }
-    console.log('handleDrop:',selection, dataTransfer.data.getData('block'), isInternal);
+    console.log('handleDrop:',selection, dataTransfer.data, isInternal);
     return 'not-handled';
   };
   onTab = (evt) => {
@@ -213,7 +241,7 @@ export class RichEditor extends React.Component {
   };
   myBlockRenderer = block => {
     const type = block.getType();
-    console.log('myBlockRenderer:getEntityAt:', block.getType(), block, block.getEntityAt(0));
+    // console.log('myBlockRenderer:getEntityAt:', block.getType(), block, block.getEntityAt(0));
     if (block.getType() === 'atomic' && block.getEntityAt(0)) {
       return {
         component: Atomic,
@@ -353,11 +381,12 @@ export class RichEditor extends React.Component {
                 font-family: 'Inconsolata', 'Menlo', 'Consolas', monospace;
                 font-size: 14px;
                 padding: 5px;
+                overflow-x: scroll;
               }
 
               .RichEditor-editor .public-DraftStyleDefault-pre pre {
                 // white-space: normal;
-                margin: 8px 0px;
+                margin: 5px 0px;
               }
 
               .RichEditor-controls {
@@ -365,6 +394,7 @@ export class RichEditor extends React.Component {
                 font-size: 14px;
                 margin-bottom: 5px;
                 user-select: none;
+                display: inline-block;
               }
 
               .RichEditor-styleButton {
@@ -474,7 +504,7 @@ const InlineStyleControls = props => {
     currentStyle = editorState.getCurrentInlineStyle();
   }
 
-  console.log('InlineStyleControls:currentStyle', currentStyle);
+  // console.log('InlineStyleControls:currentStyle', currentStyle);
   return (
     <div className="RichEditor-controls">
       {INLINE_STYLES.map(type =>

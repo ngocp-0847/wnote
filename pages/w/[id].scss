@@ -12,6 +12,9 @@
     margin: 0px 5px;
     padding: 5px 12px;
     cursor: pointer;
+    background-color: #5890ff;
+    color: white;
+    font-weight: bold;
   }
   #con-r{
     #btn-d-no{
@@ -58,17 +61,20 @@ main {
 // }
 main .sidebar-note {
   width: 240px;
-  background-color: #f4fbf4;
+  background-color: #f0f8ff;
   flex: 0 0 auto;
   .inner-list-note{
     height: 100%;
     display: flex;
     flex-direction: column;
     #header-ln{
-      background-color: #ededed;
+      background-color: #fff0cb;
       margin-top: 0px;
       margin-bottom: 0px;
       padding: 10px;
+      -webkit-box-shadow: inset -1px -1px 3px 0px rgba(242,211,162,1);
+      -moz-box-shadow: inset -1px -1px 3px 0px rgba(242,211,162,1);
+      box-shadow: inset -1px -1px 3px 0px rgba(242,211,162,1);
     }
     .wr-hei-note{
       flex: 1;

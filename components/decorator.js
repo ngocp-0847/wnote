@@ -1,14 +1,10 @@
 import { EditorState, CompositeDecorator, ContentState, Modifier } from 'draft-js';
 
 function findImageEntities(contentBlock, callback, contentState) {
-  console.log('findImageEntities:', contentState, contentBlock, callback);
+  // console.log('findImageEntities:', contentState, contentBlock, callback);
   contentBlock.findEntityRanges(
     (character) => {
       const entityKey = character.getEntity();
-      console.log('findImageEntities:findEntityRanges:', character, entityKey);
-      if (entityKey !== null) {
-        console.log('findImageEntities:entityKey:type', contentState.getEntity(entityKey).getType());
-      }
       return (
         entityKey !== null &&
         contentState.getEntity(entityKey).getType() === 'IMAGE'
@@ -19,11 +15,16 @@ function findImageEntities(contentBlock, callback, contentState) {
 }
 
 export const Image = (props) => {
-  const {contentState, block, blockKey, start, end} = props;
-  let entityKey = null;
+  let {contentState, block, blockKey, start, end, entityKey} = props;
+
   console.log('Image:decorator:', props);
   if (block) {
     entityKey = block.getEntityAt(0);
+    blockKey = block.getKey();
+    if (block.getType() == 'atomic') {
+      start = 0;
+      end = block.getLength();
+    }
   } else {
     entityKey = props.entityKey;
   }

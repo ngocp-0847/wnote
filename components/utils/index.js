@@ -69,7 +69,8 @@ export function insertBlockAfterKey(editorState, blockKey, blockMapInsert) {
   for(let [key, blockInsert] of blockMapInsert) {
     if (isFirstBlockInsert) {
       let characterBeforeSelect = currentBlock.getText().slice(0, startOffsetCharactor);
-      blockInsert = currentBlock.merge({text: characterBeforeSelect+blockInsert.getText()});
+      blockInsert = currentBlock.merge({text: characterBeforeSelect+blockInsert.getText(),
+        characterList: blockInsert.getCharacterList()});
       blocksBefore = blocksBefore.concat([[blockInsert.getKey(), blockInsert]]);
       isFirstBlockInsert = false;
     } else {
