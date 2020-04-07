@@ -28,10 +28,13 @@ const extendedBlockRenderMap = DefaultDraftBlockRenderMap.merge(newBlockRenderMa
 const {hasCommandModifier} = KeyBindingUtil;
 
 function myKeyBindingFn(e) {
-  console.log('myKeyBindingFn:', e, e.shiftKey);
+  console.log('myKeyBindingFn:', e, e.shiftKey, e.metaKey);
   if (e.keyCode === 83 /* `S` key */ && hasCommandModifier(e)) {
     return 'myeditor-save';
+  } else if (e.metaKey && e.key === 'h') {
+    return 'highlight';
   }
+
   return getDefaultKeyBinding(e);
 }
 
@@ -119,10 +122,10 @@ export class RichEditor extends React.Component {
 
   handleKeyCommand = command => {
     console.log('handleKeyCommand:', command);
+    let newState = RichUtils.handleKeyCommand(this.props.editorState, command)
     if (command === 'myeditor-save') {
       return 'handled';
-    }
-    if (command == 'backspace') {
+    } else if (command === 'backspace') {
       const editorState = this.props.editorState;
       const contentState = editorState.getCurrentContent();
       const selectionState = editorState.getSelection();
@@ -175,8 +178,11 @@ export class RichEditor extends React.Component {
           return 'handled';
         }
       }
+    } else if (command === 'highlight') {
+      newState = RichUtils.toggleInlineStyle(editorState, 'HIGHLIGHT');
+      this.onChange(newState);
+      return 'handled';
     }
-    let newState = RichUtils.handleKeyCommand(this.props.editorState, command)
 
     if (newState) {
       console.log('handleKeyCommand:newState:', newState);
@@ -259,13 +265,11 @@ export class RichEditor extends React.Component {
     const currentBlock = getCurrentBlock(editorState);
 
     if (currentBlock.getType() == 'code-block') {
-      const blockMapTextPaste = ContentState.createFromText(text.trim()).blockMap;
-      console.log('handlePasteListText:blockMapTextPaste:', blockMapTextPaste.toJS())
-      let editorState = this.props.editorState;
-      editorState = insertBlockAfterKey(editorState, currentBlock.getKey(), blockMapTextPaste)
-      console.log('handlePastedText:addBlock:', getAllBlocks(editorState).toJS());
-      this.onChange(editorState);
-      return true;
+      const newContentState = Modifier.replaceText(contentState, selectionState, text.trim());
+      const newEditorState = EditorState.push(editorState, newContentState, 'insert-fragment');
+      console.log('handlePastedText:addBlock:', getAllBlocks(newEditorState).toJS());
+      this.onChange(newEditorState);
+      return 'handled';
     } else {
       console.log('handlePastedText:beforeConvert:', text, html);
       if (html) {
@@ -414,10 +418,19 @@ export class RichEditor extends React.Component {
     );
   }
 }
+
+const defaultStyle = {
+  background: '#ffffb6',
+  padding: '0 .2em',
+};
+
 // Custom overrides for "code" style.
 const styleMap = {
-
+  'HIGHLIGHT': {
+    ...defaultStyle,
+  },
 };
+
 function getBlockStyle(block) {
   switch (block.getType()) {
     case 'blockquote':
@@ -490,6 +503,7 @@ var INLINE_STYLES = [
   { label: 'Italic', style: 'ITALIC' },
   { label: 'Underline', style: 'UNDERLINE' },
   { label: 'Monospace', style: 'CODE' },
+  { label: 'Highlight', style: 'HIGHLIGHT' },
 ];
 const InlineStyleControls = props => {
   const { editorState } = props;

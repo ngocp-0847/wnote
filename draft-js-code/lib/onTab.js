@@ -106,6 +106,9 @@ function onTab(e, editorState) {
     let anchorOffset = selectionState.getAnchorOffset();
     let focusKey = selectionState.getFocusKey();
     let focusOffset = selectionState.getFocusOffset();
+    let isBackward = selectionState.getIsBackward();
+
+    console.log('onTab:key:', anchorKey, focusKey);
 
     let block = contentState.getBlockForKey(anchorKey);
 
@@ -157,10 +160,15 @@ function onTab(e, editorState) {
         newTextChange
       )
 
-      if (blockKey == endKey) {
+      const isBreak = (!isBackward && blockKey == endKey) || (isBackward && blockKey == startKey);
+      if (isBreak) {
         break;
       } else {
-        block = contentState.getBlockAfter(blockKey)
+        if (selectionState.getIsBackward()) {
+          block = contentState.getBlockBefore(blockKey)
+        } else {
+          block = contentState.getBlockAfter(blockKey)
+        }
       }
     }
 
@@ -169,13 +177,15 @@ function onTab(e, editorState) {
       contentState,
       'insert-text'
     );
+    let keyCreated = isBackward ? focusKey : anchorKey;
     const newSelection = SelectionState
-        .createEmpty(anchorKey)
+        .createEmpty(keyCreated)
         .merge({
           anchorKey: anchorKey,
           anchorOffset: anchorOffset,
           focusKey: focusKey,
           focusOffset: focusOffset,
+          isBackward: isBackward,
         });
 
     newEditorState = EditorState.forceSelection(
