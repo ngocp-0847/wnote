@@ -1,7 +1,8 @@
-import { EditorState, CompositeDecorator, ContentState, Modifier } from 'draft-js';
+import {EditorState, ContentState, CompositeDecorator, Modifier} from '../draft-js/lib/Draft';
+
+const { Record } = require('immutable');
 
 function findImageEntities(contentBlock, callback, contentState) {
-  // console.log('findImageEntities:', contentState, contentBlock, callback);
   contentBlock.findEntityRanges(
     (character) => {
       const entityKey = character.getEntity();
@@ -52,32 +53,66 @@ export const Image = (props) => {
   }
 
   return (
-    <span className="entity-img" data-offset-key={props.offsetKey} draggable onDragStart={handleDragStart}>
+    <span data-text={true} className="entity-img" data-offset-key={props.offsetKey} draggable onDragStart={handleDragStart}>
       {content}
     </span>
   );
 };
+
+function findLinkEntities(contentBlock, callback, contentState) {
+  contentBlock.findEntityRanges(
+    (character) => {
+      const entityKey = character.getEntity();
+
+      return (
+        entityKey !== null &&
+        contentState.getEntity(entityKey).getType() === 'LINK'
+      )
+    },
+    callback
+  )
+}
+
+const Link = (props) => {
+  let {url, style} = props.contentState.getEntity(props.entityKey).getData();
+  if (!style) {
+    style = {cursor: 'pointer'};
+  } else {
+    style = Object.assign(style, {cursor: 'pointer'});
+  }
+  return (
+    <a href={url} style={style}>{props.children}</a>
+  )
+}
 
 const decorator = new CompositeDecorator([
   {
     strategy: findImageEntities,
     component: Image,
   },
+  {
+    strategy: findLinkEntities,
+    component: Link
+  }
 ]);
 
 export function createWithContent(contentState) {
   return EditorState.createWithContent(contentState, decorator);
 }
 
-export function appendBlocks(editorState, contentBlocks, entityMap) {
+export function appendBlocks(editorState, mixBlocks, entityMap) {
   const selection = editorState.getSelection();
   let currentContentState = editorState.getCurrentContent();
-  const currentBlock = currentContentState.getBlockForKey(selection.getEndKey());
+
   const contentState = ContentState.createFromBlockArray(
-    contentBlocks,
-    entityMap,
-  );
-  console.log('appendBlocks:', currentContentState, contentBlocks, contentState.getBlockMap().toJS());
+      mixBlocks,
+      entityMap,
+    );
+  console.log('appendBlocks:', contentState.getBlockMap().toJS(), entityMap.all());
+  for (let [key, value] of Object.entries(entityMap.all())) {
+    currentContentState = currentContentState.addEntity(entityMap.get(key));
+  }
+
   currentContentState = Modifier.replaceWithFragment(currentContentState, selection, contentState.getBlockMap());
   let newEditorState = EditorState.push(editorState, currentContentState, 'insert-fragment');
   console.log('appendBlocks:newEditorState:', currentContentState.getBlockMap().toJS());

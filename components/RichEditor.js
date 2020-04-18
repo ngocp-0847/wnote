@@ -1,8 +1,11 @@
 import React from 'react';
-import {Editor, EditorState, ContentState, SelectionState, RichUtils, Entity, AtomicBlockUtils,
-  Modifier, DefaultDraftBlockRenderMap, genKey ,
-  getDefaultKeyBinding, KeyBindingUtil, convertFromHTML,
-} from 'draft-js';
+
+import {Editor, ContentState, EditorState, SelectionState,
+  RichUtils, Entity, AtomicBlockUtils,
+  Modifier, DefaultDraftBlockRenderMap,
+  genKey , getDefaultKeyBinding, KeyBindingUtil} from '../draft-js/lib/Draft';
+
+import convertFromHTML from '../draft-js/lib/convertFromHTMLToContentBlocks.js';
 
 import CodeUtils from '../draft-js-code/lib';
 import Atomic from './Atomic';
@@ -11,6 +14,7 @@ import {getCurrentBlock} from '../components/utils/editor';
 import {addBlock, addAtomicBlock} from '../components/utils/modifiers';
 import {getAllBlocks, insertBlockAfterKey, getEntities} from '../components/utils';
 import {createWithContent, appendBlocks} from '../components/decorator';
+import eachSeries from 'async/eachSeries';
 
 import {Map,OrderedSet} from 'immutable';
 
@@ -21,6 +25,9 @@ const ACCEPTED_MIMES_FOR_PASTE = [
 ];
 
 const newBlockRenderMap = Map({
+  'span': {
+    element: 'paragraph'
+  },
 });
 
 const extendedBlockRenderMap = DefaultDraftBlockRenderMap.merge(newBlockRenderMap);
@@ -87,27 +94,41 @@ export class RichEditor extends React.Component {
     const anchorKey = selection.getAnchorKey();
     console.log('handleDroppedFiles:', selection, files);
     if (files && files.length) {
-      const file = files[0];
+      let newEditorState = editorState;
+      var iterator = (file, done) => {
+        if (ACCEPTED_MIMES_FOR_PASTE.includes(file.type)) {
+          this.readImageAsDataUrl(file, base64 => {
+            console.log('handleDroppedFiles:readImageAsDataUrl:', selection, file);
+            const contentState = newEditorState.getCurrentContent();
+            const contentStateWithEntity = contentState.createEntity('IMAGE', 'IMMUTABLE', {src: base64});
+            const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
 
-      if (ACCEPTED_MIMES_FOR_PASTE.includes(file.type)) {
-        this.readImageAsDataUrl(file, base64 => {
-          const contentState = editorState.getCurrentContent();
-          const contentStateWithEntity = contentState.createEntity('IMAGE', 'IMMUTABLE', {src: base64});
-          const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+            let focusOffset = selection.getFocusOffset();
+            let anchorKeyDrop = selection.getAnchorKey();
+            let blockDrop = contentState.getBlockForKey(anchorKeyDrop);
+            const contentStateWithImgDrop = Modifier.insertText(contentStateWithEntity, selection, ' ', null, entityKey);
 
-          let focusOffset = selection.getFocusOffset();
-          let anchorKeyDrop = selection.getAnchorKey();
-          let blockDrop = contentState.getBlockForKey(anchorKeyDrop);
-          const contentStateWithImgDrop = Modifier.insertText(contentStateWithEntity, selection, ' ', null, entityKey);
-          console.log('handleDroppedFiles:readImageAsDataUrl:', selection);
-          const newEditorState = EditorState.push(editorState, contentStateWithImgDrop, 'apply-entity');
-          console.log('handleDroppedFiles:afterPush:', newEditorState.toJS(), contentStateWithEntity.toJS(), getEntities(newEditorState));
+            newEditorState = EditorState.push(newEditorState, contentStateWithImgDrop, 'apply-entity');
 
-          this.onChange(newEditorState);
-        });
+            done(null, true);
+          });
+        } else {
+          done(null, true);
+        }
+      };
 
-        return 'handled';
-      }
+      eachSeries(files, iterator, (err, res) => {
+        console.log('handleDroppedFiles:async:', err, res);
+        const newSelection = selection.merge({
+          anchorOffset: selection.getAnchorOffset() + files.length,
+          focusOffset: selection.getFocusOffset() + files.length,
+        })
+        newEditorState = EditorState.forceSelection(newEditorState, newSelection);
+        newEditorState = RichUtils.insertSoftNewline(newEditorState);
+        this.onChange(newEditorState);
+      });
+
+      return 'handled';
     }
 
     return 'not-handled';
@@ -133,49 +154,48 @@ export class RichEditor extends React.Component {
       const currentBlock = getCurrentBlock(editorState);
       console.log('handleKeyCommand:backspace:', currentBlock);
       if (currentBlock) {
-        const entityImage = currentBlock.getCharacterList().find(cm => {
-          const entityKey = cm.getEntity();
-          console.log('handleKeyCommand:getCharacterList:', cm);
-          if (entityKey) {
-            console.log('handleKeyCommand:entityKey:', cm, contentState.getEntity(entityKey).getType());
-          }
-          return entityKey && contentState.getEntity(entityKey).getType() == 'IMAGE';
-        });
-
-        if (entityImage) {
-          const entityKey = entityImage.getEntity();
-          const entityInstance = contentState.getEntity(entityKey);
-          console.log('handleKeyCommand:entityImage:', entityInstance);
-          console.log('handleKeyCommand:entityImage:getStartOffset:',
-            selectionState.getStartOffset(),
-            selectionState.getFocusOffset(),
-            selectionState.getAnchorOffset(),
-            selectionState.getAnchorKey(),
-            selectionState.getFocusKey(),
-            currentBlock.getLength()
+        const entityKey = currentBlock.getEntityAt(selectionState.getAnchorOffset());
+        if (entityKey) {
+          const entityImage = contentState.getEntity(entityKey);
+          if (entityImage.getType == 'IMAGE') {
+            console.log('handleKeyCommand:backspace:selectionStateBefore:', selectionState);
+            console.log('handleKeyCommand:entityImage:getStartOffset:',
+              selectionState.getStartOffset(),
+              selectionState.getFocusOffset(),
+              selectionState.getAnchorOffset(),
+              selectionState.getAnchorKey(),
+              selectionState.getFocusKey(),
+              currentBlock.getLength()
+              );
+            const withoutAtomicEntity = Modifier.removeRange(
+              contentState,
+              new SelectionState({
+                anchorKey: currentBlock.getKey(),
+                anchorOffset: selectionState.getAnchorOffset(),
+                focusKey: currentBlock.getKey(),
+                focusOffset: selectionState.getAnchorOffset() + 1,
+              }),
+              'backward',
             );
-          const withoutAtomicEntity = Modifier.removeRange(
-            contentState,
-            new SelectionState({
-              anchorKey: currentBlock.getKey(),
-              anchorOffset: selectionState.getAnchorOffset(),
-              focusKey: currentBlock.getKey(),
-              focusOffset: selectionState.getAnchorOffset() + 1,
-            }),
-            'backward',
-          );
-          const targetSelection = withoutAtomicEntity.getSelectionAfter();
+            const targetSelection = new SelectionState({
+                anchorKey: currentBlock.getKey(),
+                anchorOffset: selectionState.getAnchorOffset() - 1,
+                focusKey: currentBlock.getKey(),
+                focusOffset: selectionState.getAnchorOffset() - 1,
+            });
 
-          let newEditorState = EditorState.push(
-            editorState,
-            withoutAtomicEntity,
-            'remove-range',
-          );
+            console.log('handleKeyCommand:backspace:afterSelection:', targetSelection);
+            let newEditorState = EditorState.push(
+              editorState,
+              withoutAtomicEntity,
+              'remove-range',
+            );
+            console.log('handleKeyCommand:backspace:', targetSelection);
+            newEditorState = EditorState.forceSelection(newEditorState, targetSelection);
 
-          newEditorState = EditorState.forceSelection(newEditorState, targetSelection);
-
-          this.onChange(newEditorState);
-          return 'handled';
+            this.onChange(newEditorState);
+            return 'handled';
+          }
         }
       }
     } else if (command === 'highlight') {
@@ -209,15 +229,6 @@ export class RichEditor extends React.Component {
       });
       console.log('handleDrop:selection:', selection, removeSelection);
       const contentStateRemove = Modifier.removeRange(contentState, removeSelection, 'backward');
-      // const selectionAfterRemove = contentStateRemove.getSelectionAfter();
-      // let newEditorState = editorState;
-      // let newEditorState = EditorState.push(
-      //   editorState,
-      //   contentStateRemove,
-      //   'remove-range',
-      // );
-
-      // newEditorState = EditorState.forceSelection(newEditorState, selectionAfterRemove);
       console.log('handleDrop:contentStateRemove:', contentStateRemove);
       const contentStateDrop = Modifier.insertText(contentStateRemove, selection, ' ', null, entityKey);
 
@@ -279,7 +290,9 @@ export class RichEditor extends React.Component {
           blocksFromHTML.entityMap,
         );
         this.onChange(appendBlocks(editorState, blocksFromHTML.contentBlocks, blocksFromHTML.entityMap));
-        console.log('handlePastedText:blocksFromHTML:', state, blocksFromHTML, html);
+        console.log('handlePastedText:blocksFromHTML:',
+          blocksFromHTML.contentBlocks
+          );
         return true;
       } else {
         let newContentState = Modifier.replaceText(
@@ -298,6 +311,43 @@ export class RichEditor extends React.Component {
       }
     }
   };
+  handleReturn = (e, editorState) => {
+    console.log('handleReturn:', e, editorState);
+    const contentState = editorState.getCurrentContent();
+    const selection = editorState.getSelection();
+    const blockKey = selection.getAnchorKey();
+    const anchorOffset = selection.getAnchorOffset();
+    const block = contentState.getBlockForKey(blockKey);
+    const entityKey = block.getEntityAt(anchorOffset);
+    if (entityKey) {
+      const entityInstance = contentState.getEntity(entityKey);
+      const newSelection = selection.merge({
+        anchorOffset: selection.getAnchorOffset() + 1,
+        focusOffset: selection.getFocusOffset() + 1,
+      })
+      if (entityInstance && entityInstance.type == 'IMAGE') {
+        let newEditorState = EditorState.forceSelection(editorState, newSelection);
+        newEditorState = RichUtils.insertSoftNewline(newEditorState);
+        this.onChange(newEditorState);
+        console.log('handleReturn:newSelection:', newSelection, newEditorState);
+        return 'handled';
+      }
+      console.log('handleReturn:blockKey:', blockKey, block, entityInstance);
+    }
+
+    return 'not-handled';
+  };
+  onFocus = (e) => {
+    const { editorState } = this.props;
+    const contentState = editorState.getCurrentContent();
+    const selection = editorState.getSelection();
+    setTimeout(() => {
+      console.log('onFocus:', selection);
+    }, 0)
+  };
+  componentDidMount () {
+    console.log('componentDidMount:');
+  }
   render() {
     const { editorState } = this.props;
     // If the user changes block type before entering any text, we can
@@ -310,110 +360,122 @@ export class RichEditor extends React.Component {
       }
     }
     return (
-      <div className="RichEditor-root">
-        <BlockStyleControls
-          editorState={editorState}
-          onToggle={this.toggleBlockType}
-        />
-        <InlineStyleControls
-          editorState={editorState}
-          onToggle={this.toggleInlineStyle}
-        />
-        <div className={className} onClick={this.focus}>
-          <Editor
-            handleDrop={this.handleDrop}
-            handleDroppedFiles={this.handleDroppedFiles}
-            blockRenderMap={extendedBlockRenderMap}
-            handlePastedText={this.handlePastedText}
-            blockRendererFn={this.myBlockRenderer}
-            handlePastedFiles={this.handlePastedFiles}
-            blockStyleFn={getBlockStyle}
-            customStyleMap={styleMap}
+      <div className="wrap-editor">
+        <div className="toolbar">
+          <BlockStyleControls
             editorState={editorState}
-            handleKeyCommand={this.handleKeyCommand}
-            keyBindingFn={myKeyBindingFn}
-            onChange={this.onChange}
-            onTab={this.onTab}
-            placeholder="Write note..."
-            ref="editor"
-            spellCheck={false}
-            // plugins={[codeEditorPlugin]}
+            onToggle={this.toggleBlockType}
+          />
+          <InlineStyleControls
+            editorState={editorState}
+            onToggle={this.toggleInlineStyle}
           />
         </div>
-           <style jsx global>{`
-              .RichEditor-root {
-                background: #fff;
-                border: 1px solid #ddd;
-                font-family: 'Georgia', serif;
-                font-size: 14px;
+        <div className="area-scroll">
+          <div className="RichEditor-root">
+            <div className={className} onClick={this.focus}>
+              <Editor
+                handleDrop={this.handleDrop}
+                handleDroppedFiles={this.handleDroppedFiles}
+                blockRenderMap={extendedBlockRenderMap}
+                handlePastedText={this.handlePastedText}
+                blockRendererFn={this.myBlockRenderer}
+                handlePastedFiles={this.handlePastedFiles}
+                blockStyleFn={getBlockStyle}
+                customStyleMap={styleMap}
+                editorState={editorState}
+                handleKeyCommand={this.handleKeyCommand}
+                keyBindingFn={myKeyBindingFn}
+                onChange={this.onChange}
+                onTab={this.onTab}
+                handleReturn={this.handleReturn}
+                placeholder="Write note..."
+                ref="editor"
+                spellCheck={false}
+                onFocus={this.onFocus}
+                // plugins={[codeEditorPlugin]}
+              />
+            </div>
+          </div>
+        </div>
+          <style jsx global>{`
+            .wrap-editor{
+              display: flex;
+              flex-direction: column;
+            }
+            .wrap-editor .toolbar{
+              display: block;
+              padding: 4px;
+            }
+            .RichEditor-root {
+              background: #fff;
+              border-top: 1px solid #ddd;
+              font-family: 'Georgia', serif;
+              font-size: 14px;
+              padding: 5px;
+            }
+            .RichEditor-editor {
+              cursor: text;
+              font-size: 16px;
+              margin-top: 2px;
+            }
 
-                padding: 15px;
-              }
+            .RichEditor-editor .public-DraftEditorPlaceholder-root,
+            .RichEditor-editor .public-DraftEditor-content {
+              padding: 2px;
+            }
 
-              .RichEditor-editor {
-                border-top: 1px solid #ddd;
-                cursor: text;
-                font-size: 16px;
-                margin-top: 10px;
-              }
+            .RichEditor-editor .public-DraftEditor-content {
+              min-height: 100px;
+            }
 
-              .RichEditor-editor .public-DraftEditorPlaceholder-root,
-              .RichEditor-editor .public-DraftEditor-content {
-                margin: 0 -15px -15px;
-                padding: 15px;
-              }
+            .RichEditor-hidePlaceholder .public-DraftEditorPlaceholder-root {
+              display: none;
+            }
 
-              .RichEditor-editor .public-DraftEditor-content {
-                min-height: 100px;
-              }
+            .RichEditor-editor .RichEditor-blockquote {
+              border-left: 5px solid #eee;
+              color: #666;
+              font-family: 'Hoefler Text', 'Georgia', serif;
+              font-style: italic;
+              margin: 16px 0;
+              padding: 10px 20px;
+            }
 
-              .RichEditor-hidePlaceholder .public-DraftEditorPlaceholder-root {
-                display: none;
-              }
+            .RichEditor-editor .public-DraftStyleDefault-pre {
+              background-color: rgba(0, 0, 0, 0.05);
+              font-family: 'Inconsolata', 'Menlo', 'Consolas', monospace;
+              font-size: 14px;
+              padding: 5px;
+              overflow-x: scroll;
+            }
 
-              .RichEditor-editor .RichEditor-blockquote {
-                border-left: 5px solid #eee;
-                color: #666;
-                font-family: 'Hoefler Text', 'Georgia', serif;
-                font-style: italic;
-                margin: 16px 0;
-                padding: 10px 20px;
-              }
+            .RichEditor-editor .public-DraftStyleDefault-pre pre {
+              // white-space: normal;
+              margin: 5px 0px;
+            }
 
-              .RichEditor-editor .public-DraftStyleDefault-pre {
-                background-color: rgba(0, 0, 0, 0.05);
-                font-family: 'Inconsolata', 'Menlo', 'Consolas', monospace;
-                font-size: 14px;
-                padding: 5px;
-                overflow-x: scroll;
-              }
+            .RichEditor-controls {
+              font-family: 'Helvetica', sans-serif;
+              font-size: 14px;
+              margin-bottom: 5px;
+              user-select: none;
+              display: inline-block;
+            }
 
-              .RichEditor-editor .public-DraftStyleDefault-pre pre {
-                // white-space: normal;
-                margin: 5px 0px;
-              }
+            .RichEditor-styleButton {
+              color: #999;
+              cursor: pointer;
+              margin-right: 16px;
+              padding: 2px 0;
+              display: inline-block;
+            }
 
-              .RichEditor-controls {
-                font-family: 'Helvetica', sans-serif;
-                font-size: 14px;
-                margin-bottom: 5px;
-                user-select: none;
-                display: inline-block;
-              }
+            .RichEditor-activeButton {
+              color: #5890ff;
+            }
 
-              .RichEditor-styleButton {
-                color: #999;
-                cursor: pointer;
-                margin-right: 16px;
-                padding: 2px 0;
-                display: inline-block;
-              }
-
-              .RichEditor-activeButton {
-                color: #5890ff;
-              }
-
-          `}</style>
+        `}</style>
       </div>
     );
   }

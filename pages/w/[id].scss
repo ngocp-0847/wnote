@@ -1,6 +1,6 @@
 #header-editor{
-  padding: 3px;
-  margin: 10px;
+  padding: 13px;
+  // margin: 10px;
   display: flex;
   flex-direction: row;
   h4{
@@ -72,9 +72,8 @@ main .sidebar-note {
       margin-top: 0px;
       margin-bottom: 0px;
       padding: 10px;
-      -webkit-box-shadow: inset -1px -1px 3px 0px rgba(242,211,162,1);
-      -moz-box-shadow: inset -1px -1px 3px 0px rgba(242,211,162,1);
-      box-shadow: inset -1px -1px 3px 0px rgba(242,211,162,1);
+      border-bottom: 1px solid #f2d3a2;
+      border-right: 1px solid #f2d3a2;
     }
     .wr-hei-note{
       flex: 1;
@@ -114,5 +113,24 @@ main .main-note {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  overflow-y: auto;
+  height: 100%;
+  .editor{
+    flex: 1;
+    height: calc(100% - 53px);
+    .wrap-editor{
+      flex: 1;
+      height:  100%;
+      .toolbar{
+        flex: 0 1 auto;
+      }
+      .area-scroll{
+        flex: 1;
+        display: flex;
+        overflow-y: scroll;
+        .RichEditor-root{
+          flex: 1;
+        }
+      }
+    }
+  }
 }

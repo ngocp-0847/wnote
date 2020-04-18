@@ -3,7 +3,7 @@ import Layout from '../../components/layout.js';
 import React, { Component } from 'react';
 import NoSSR from 'react-no-ssr';
 import { RichEditor } from '../../components/RichEditor';
-import {EditorState, convertToRaw} from 'draft-js';
+import convertToRaw from '../../draft-js/lib/convertFromDraftStateToRaw.js';
 import Router, { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
 import {loadListNote,
@@ -59,8 +59,11 @@ class WID extends Component {
       }
       if (shortText == null && text != '') {
         shortText = text
+      } else if (shortText != null && shortText.length < 100 && text != '') {
+        shortText += ' ' + text
       }
-      if (shortImage != null && shortText != null) {
+
+      if (shortImage != null && (shortText != null && shortText.length < 100)) {
         return false;
       }
     })
