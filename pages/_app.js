@@ -1,6 +1,7 @@
 // This default export is required in a new `pages/_app.js` file.
 // import "prismjs/themes/prism.css";
 // import 'draft-js/dist/Draft.css';
+require('dotenv').config();
 import "./w/[id].scss";
 
 import App from 'next/app';

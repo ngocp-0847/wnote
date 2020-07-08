@@ -13,6 +13,7 @@
     "async": "^3.2.0",
     "classnames": "^2.2.6",
     "clsx": "^1.1.0",
+    "dotenv": "^8.2.0",
     "draft-js": "^0.11.4",
     "draft-js-code-editor-plugin": "^0.2.1",
     "draft-js-export-html": "^1.4.1",
