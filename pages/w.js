@@ -28,15 +28,11 @@ class W extends Component {
 
 const mapStateToProps = state => {
   return {
-    // notes: state.note.notes,
-    // noteActive: state.noteActive,
   };
 };
 
 const mapDispatchToProps = {
     loadNoteLatest: loadNoteLatest,
-    // loadListNote: loadListNote,
-    // startSaveNote: startSaveNote,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(W)));

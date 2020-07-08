@@ -148,16 +148,16 @@ class WID extends Component {
                     this.props.notes.map((note, i) => {
 
                       let styleText = styleNotImage;
-                      if (note._source.shortContent && note._source.shortContent.shortImage) {
+                      if (note._source && note._source.shortContent && note._source.shortContent.shortImage) {
                         styleText = styleHasImage;
                       }
 
                       return (
                         <div key={i} className={classNames({'note-c': true, 'active': note._id == this.props.noteActive._id})}
                           onClick={this.activeNoteSidebar.bind(this, note)}>
-                          <div style={styleText} className="text">{note._source.shortContent ? note._source.shortContent.shortText : ''}</div>
+                          <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
                           {
-                            (note._source.shortContent && note._source.shortContent.shortImage) &&
+                            (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
                             (
                               <div className="image-s">
                                 <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
