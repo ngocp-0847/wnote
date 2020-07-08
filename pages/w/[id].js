@@ -145,7 +145,7 @@ class WID extends Component {
             <div className="wr-hei-note">
               <div className="list-note">
                   {
-                    this.props.notes.map((note, i) => {
+                    this.props.notes && this.props.notes.map((note, i) => {
 
                       let styleText = styleNotImage;
                       if (note._source && note._source.shortContent && note._source.shortContent.shortImage) {
