@@ -60,3 +60,17 @@ server {
 
 ```
 
+Create index for search ES:
+```
+curl -X PUT "https://{domainid}.us-east-2.es.amazonaws.com/wnote"
+```
+
+Install pm2:
+```
+npm install pm2@latest -g
+```
+
+Run pm2 for build app and run background for web:
+```
+pm2 start yarn --interpreter bash --name nextjs -- start
+```
