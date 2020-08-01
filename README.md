@@ -29,3 +29,48 @@ The easiest way to deploy your Next.js app is to use the [ZEIT Now Platform](htt
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
 # wnote
+Nginx setting:
+
+```
+server {
+    server_name 3.128.204.249;
+    access_log /opt/nextjs/logs/access.log;
+    error_log /opt/nextjs/logs/error.log error;
+
+    location /_next/ {
+        alias /var/www/html/wnote/.next/;
+        expires 30d;
+        access_log on;
+    }
+
+    location / {
+        # reverse proxy for next server
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        
+        # we need to remove this 404 handling
+        # because next's _next folder and own handling
+        # try_files $uri $uri/ =404;
+    }
+}
+
+```
+
+Create index for search ES:
+```
+curl -X PUT "https://{domainid}.us-east-2.es.amazonaws.com/wnote"
+```
+
+Install pm2:
+```
+npm install pm2@latest -g
+```
+
+Run pm2 for build app and run background for web:
+```
+pm2 start yarn --interpreter bash --name nextjs -- start
+```
