@@ -16,6 +16,7 @@ import {
   unsetSearch,
   deleteNote,
   removeFromList,
+  loadDefineIdentity
 } from './actions/noteAction';
 import noteService from './services/noteService.js'
 import {EditorState, convertFromRaw} from 'draft-js';
@@ -70,19 +71,10 @@ function* fnLoadListNote({payload}) {
   }
 }
 
-function* fnLoadNoteLastest() {
-  var userID = localStorage.getItem('userID');
-  var noteID = uuidv4()
-  if (userID == null) {
-    userID = uuidv4()
-    localStorage.setItem('userID', userID)
-    const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-    yield put(changeStatusForSave(true));
-  } else {
-    var body = {
-      userID: localStorage.getItem('userID'),
-    }
-    const data = yield request('/api/note/latest', {
+function* fnLoadDefineIdentity({payload}) {
+    var noteID = uuidv4()
+    // if user authen github
+    const resAuth = yield request('/api/auth/info', {
         method: 'POST', // *GET, POST, PUT, DELETE, etc.
         mode: 'cors', // no-cors, *cors, same-origin
         cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
@@ -93,22 +85,47 @@ function* fnLoadNoteLastest() {
         },
         redirect: 'follow', // manual, *follow, error
         referrerPolicy: 'no-referrer', // no-referrer, *client
-        body: JSON.stringify(body) // body data type must match "Content-Type" header
+        body: JSON.stringify({}) // body data type must match "Content-Type" header
     });
-    console.log('fnLoadNoteLastest:request:', data)
-    if (data.code == 200) {
-      let rawdata = data.data;
-      var hits = rawdata.hits;
-      if (hits.length != 0) {
-        noteID = hits[0]._id
-        console.log('fnLoadNoteLastest:hits:', hits, noteID);
-        yield put(fillNoteActive(hits[0]));
-        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-        yield put(changeStatusForSave(true));
-      } else {
-        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-        yield put(changeStatusForSave(true));
-      }
+    if (resAuth.code == 200) {
+        localStorage.setItem('userID', resAuth.data._source.userGeneId);
+    }
+}
+
+function* fnLoadNoteLastest({payload}) {
+  yield loadDefineIdentity();
+
+  let noteID = uuidv4();
+  yield put(changeStatusForSave(true));
+
+  var body = {
+    userID: localStorage.getItem('userID'),
+  }
+  const data = yield request('/api/note/latest', {
+      method: 'POST', // *GET, POST, PUT, DELETE, etc.
+      mode: 'cors', // no-cors, *cors, same-origin
+      cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+      credentials: 'same-origin', // include, *same-origin, omit
+      headers: {
+          'Content-Type': 'application/json'
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      redirect: 'follow', // manual, *follow, error
+      referrerPolicy: 'no-referrer', // no-referrer, *client
+      body: JSON.stringify(body) // body data type must match "Content-Type" header
+  });
+  console.log('fnLoadNoteLastest:request:', data)
+  if (data.code == 200) {
+    let rawdata = data.data;
+    var hits = rawdata.noteLatest.body.hits.hits;
+    if (hits.length != 0) {
+      noteID = hits[0]._id
+      yield put(fillNoteActive(hits[0]));
+      const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+      yield put(changeStatusForSave(true));
+    } else {
+      const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+      yield put(changeStatusForSave(true));
     }
   }
 }
@@ -223,6 +240,7 @@ function* fnDeleteNote({ payload }) {
 export default function* rootSaga() {
   console.log('rootSaga', startSaveNote().type)
   yield all([
+    takeLatest(loadDefineIdentity().type, fnLoadDefineIdentity),
     takeLatest(startSaveNote().type, fnSaveNote),
     takeLatest(loadListNote().type, fnLoadListNote),
     takeLatest(loadNoteLatest().type, fnLoadNoteLastest),

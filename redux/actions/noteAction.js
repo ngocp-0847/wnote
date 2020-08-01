@@ -19,6 +19,7 @@ export const SET_SEARCH = 'SET_SEARCH';
 export const UNSET_SEARCH = 'UNSET_SEARCH';
 export const DELETE_NOTE = 'DELETE_NOTE';
 export const REMOVE_FROM_LIST = 'REMOVE_FROM_LIST';
+export const LOAD_DEFINE_IDENTITY = 'LOAD_DEFINE_IDENTITY';
 
 export const [
   loadListNote,
@@ -39,6 +40,7 @@ export const [
   unsetSearch,
   deleteNote,
   removeFromList,
+  loadDefineIdentity,
   ] = [
   createAction(LOAD_LIST_NOTE),
   createAction(UPDATE_LIST_NOTE),
@@ -58,5 +60,6 @@ export const [
   createAction(UNSET_SEARCH),
   createAction(DELETE_NOTE),
   createAction(REMOVE_FROM_LIST),
+  createAction(LOAD_DEFINE_IDENTITY),
 ];
 

@@ -1,6 +1,7 @@
-const { Client } = require('@elastic/elasticsearch');
-const client = new Client({ node: process.env.ES_HOST });
+
 import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
+import client from '../../../lib/es';
+import withPassport from '../../../lib/withPassport'
 
 export const config = {
   api: {
@@ -10,8 +11,9 @@ export const config = {
   },
 }
 
-export default (req, res) => {
+const handler = (req, res) => {
   console.log('api:[id]:', req.method, req.body);
+
   if (req.method === 'DELETE') {
     client.update({
       index: 'wnote',
@@ -81,3 +83,6 @@ export default (req, res) => {
     });
   }
 }
+
+export default withPassport(handler)
+
