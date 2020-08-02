@@ -1,4 +1,3 @@
-import Head from 'next/head';
 import Layout from '../../components/layout.js';
 import React, { useEffect, useState } from 'react';
 import NoSSR from 'react-no-ssr';
@@ -6,7 +5,6 @@ import { RichEditor } from '../../components/RichEditor';
 import convertToRaw from '../../draft-js/lib/convertFromDraftStateToRaw.js';
 import Router, { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
-import {useIdentity} from '../../lib/withIdentity';
 
 import {
   loadListNote,
@@ -25,10 +23,6 @@ import classNames from 'classnames';
 import {debounce} from 'lodash';
 
 function WID(props) {
-    Router.events.on('routeChangeComplete', (url) => {
-        props.routeChangeComplete(url)
-    });
-
     const [eventText, setEventText] = useState('');
     const [editor, setEditor] = useState(null);
 
@@ -148,15 +142,13 @@ function WID(props) {
     let login = () => {
         router.push('/api/auth/github')
     };
-    
-    const userAuth = useIdentity();
-    console.log('userAuth:', userAuth)
-    const isLogin = userAuth == null ? false : true;
+
+    const isLogin = props.userAuth == null ? false : true;
     let areaAuth = null;
     if (isLogin) {
         areaAuth = (<div className="auth">
-                <span id="avatar"><img src={userAuth.photos[0].value} className="re-img"/></span>
-                <span id="name-auth" >{userAuth.username}</span>
+                <span id="avatar"><img src={props.userAuth._source.photos[0].value} className="re-img"/></span>
+                <span id="name-auth" >{props.userAuth._source.username}</span>
             </div>);
     } else {
         areaAuth = (<div className="auth">
@@ -232,6 +224,7 @@ const mapStateToProps = state => {
     noteActive: state.note.noteActive,
     shouldSave: state.note.shouldSave,
     editorState: state.note.editorState,
+    userAuth: state.note.userAuth,
   };
 };
 
@@ -250,3 +243,25 @@ const mapDispatchToProps = {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));
+
+// export async function getServerSideProps(ctx) {
+//     const { passportSession } = nextCookie(ctx);
+//     console.log('[id]:getServerSideProps:passportSession:', passportSession);
+//     let user = null;
+//     if (passportSession) {
+//         const serializedCookie = Buffer.from(passportSession, 'base64').toString();
+//         const {
+//             passport: { user },
+//         } = JSON.parse(serializedCookie);
+//         console.log('getServerSideProps:user:', user);
+//         if (!user) {
+//             redirectToLogin(ctx);
+//         }
+//     } else {
+//         redirectToLogin(ctx);
+//     }
+    
+//     return {
+//         props: {user},
+//     }
+// }

@@ -16,9 +16,11 @@ import {
   unsetSearch,
   deleteNote,
   removeFromList,
-  loadDefineIdentity
+  loadDefineIdentity,
+  saveUserAuth,
 } from './actions/noteAction';
-import noteService from './services/noteService.js'
+import noteService from './services/noteService.js';
+import authService from './services/authService.js';
 import {EditorState, convertFromRaw} from 'draft-js';
 import request from './requestHelper';
 import Router from 'next/router';
@@ -28,6 +30,7 @@ import {createWithContent} from '../components/decorator';
 
 import es6promise from 'es6-promise';
 import 'isomorphic-unfetch';
+
 es6promise.polyfill()
 
 function* waitFor(selector) {
@@ -41,9 +44,7 @@ function* waitFor(selector) {
 
 function* fnSaveNote({payload}) {
   yield call(waitFor, state => state.note.shouldSave);
-  console.log('fnSaveNote start:', payload)
   const noteSaved = yield call([noteService, 'fnSaveNote'], payload[0], payload[1]);
-  console.log('fnSaveNote after saved:', noteSaved)
   yield put(updateItemList(noteSaved));
 }
 
@@ -71,10 +72,34 @@ function* fnLoadListNote({payload}) {
   }
 }
 
-function* fnLoadDefineIdentity({payload}) {
-    var noteID = uuidv4()
+function* fnLoadDefineIdentity() {
     // if user authen github
-    const resAuth = yield request('/api/auth/info', {
+    const resAuth = yield authService.fnAuthInfo();
+    if (resAuth.code == 200) {
+        console.log('fnLoadDefineIdentity:', resAuth.data);
+        if (resAuth.data == false) {
+            return false;
+        } else {
+            yield put(saveUserAuth(resAuth.data));
+            localStorage.setItem('userID', resAuth.data._source.userGeneId);
+            return resAuth.data;
+        }
+    }
+}
+
+function* fnLoadNoteLastest(action) {
+    const userAuth = yield fnLoadDefineIdentity();
+    console.log('fnLoadNoteLastest:userAuth:', userAuth, action.payload);
+    if (userAuth == false) {
+        action.payload.push('/api/auth/github');
+    }
+    let noteID = uuidv4();
+    yield put(changeStatusForSave(true));
+
+    var body = {
+        userID: userAuth.userGeneId,
+    }
+    const data = yield request('/api/note/latest', {
         method: 'POST', // *GET, POST, PUT, DELETE, etc.
         mode: 'cors', // no-cors, *cors, same-origin
         cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
@@ -85,49 +110,22 @@ function* fnLoadDefineIdentity({payload}) {
         },
         redirect: 'follow', // manual, *follow, error
         referrerPolicy: 'no-referrer', // no-referrer, *client
-        body: JSON.stringify({}) // body data type must match "Content-Type" header
+        body: JSON.stringify(body) // body data type must match "Content-Type" header
     });
-    if (resAuth.code == 200) {
-        localStorage.setItem('userID', resAuth.data._source.userGeneId);
+    console.log('fnLoadNoteLastest:request:', data)
+    if (data.code == 200) {
+        let rawdata = data.data;
+        var hits = rawdata.noteLatest.body.hits.hits;
+        if (hits.length != 0) {
+        noteID = hits[0]._id
+        yield put(fillNoteActive(hits[0]));
+        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+        yield put(changeStatusForSave(true));
+        } else {
+        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+        yield put(changeStatusForSave(true));
+        }
     }
-}
-
-function* fnLoadNoteLastest({payload}) {
-  yield loadDefineIdentity();
-
-  let noteID = uuidv4();
-  yield put(changeStatusForSave(true));
-
-  var body = {
-    userID: localStorage.getItem('userID'),
-  }
-  const data = yield request('/api/note/latest', {
-      method: 'POST', // *GET, POST, PUT, DELETE, etc.
-      mode: 'cors', // no-cors, *cors, same-origin
-      cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-      credentials: 'same-origin', // include, *same-origin, omit
-      headers: {
-          'Content-Type': 'application/json'
-          // 'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      redirect: 'follow', // manual, *follow, error
-      referrerPolicy: 'no-referrer', // no-referrer, *client
-      body: JSON.stringify(body) // body data type must match "Content-Type" header
-  });
-  console.log('fnLoadNoteLastest:request:', data)
-  if (data.code == 200) {
-    let rawdata = data.data;
-    var hits = rawdata.noteLatest.body.hits.hits;
-    if (hits.length != 0) {
-      noteID = hits[0]._id
-      yield put(fillNoteActive(hits[0]));
-      const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-      yield put(changeStatusForSave(true));
-    } else {
-      const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-      yield put(changeStatusForSave(true));
-    }
-  }
 }
 
 function* fnNewEmptyNote() {

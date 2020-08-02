@@ -17,21 +17,6 @@ async function querySaveUser(body) {
   });
 }
 
-/**
- * Find user by github.userID
- * @param {*} userID 
- */
-async function findOne(userID) {
-  return client.search({
-    index: 'users',
-    body: {
-      query: {
-        match: { userID: userID }
-      }
-    }
-  })
-}
-
 async function searchLastest(userObj) {
   return client.search({
     index: 'wnote',
@@ -59,10 +44,7 @@ async function searchLastest(userObj) {
 
 export default withPassport(async (req, res) => {
   if (req.method === 'POST') {
-    console.log('latest:', req.user);
-    let userObj = await findOne(req.user.id);
-    console.log('latest:userObj:', userObj);
-    let noteLatest = await searchLastest(userObj.body.hits.hits[0]);
-    responseSuccess(res, {noteLatest: noteLatest, userObj: userObj});
+    let noteLatest = await searchLastest(req.user);
+    responseSuccess(res, {noteLatest: noteLatest, userObj: req.user});
   }
 })

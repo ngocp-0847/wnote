@@ -10,14 +10,43 @@ import React from 'react';
 import withRedux from "next-redux-wrapper";
 import store from '../redux/store';
 import withIdentity from '../lib/withIdentity';
+import nextCookie from 'next-cookies';
 
 class MyApp extends App {
 
     static async getInitialProps({Component, ctx}) {
+        console.log('getInitialProps');
         const pageProps = Component.getInitialProps ? await Component.getInitialProps(ctx) : {};
 
         //Anything returned here can be accessed by the client
         return {pageProps: pageProps};
+    }
+
+    static async getServerSideProps(ctx) {
+        console.log('getServerSideProps:ctx:');
+        const { passportSession } = nextCookie(ctx.ctx);
+        return {
+            props: {},
+        }
+
+        let session = null
+        if (!passportSession) {
+            return {
+                props: {},
+            }
+        }
+
+        const serializedCookie = Buffer.from(passportSession, 'base64').toString()
+
+        const {
+            passport: { user },
+        } = JSON.parse(serializedCookie)
+        // redirect to login if cookie exists but is empty
+        if (!user) {
+            redirectToLogin(ctx.ctx)
+        }
+
+        session = user
     }
 
     render() {
@@ -36,4 +65,4 @@ class MyApp extends App {
 const makeStore = () => store;
 
 //withRedux wrapper that passes the store to the App Component
-export default withIdentity(withRedux(makeStore)(MyApp));
+export default withRedux(makeStore)(MyApp);

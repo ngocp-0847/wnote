@@ -6,15 +6,21 @@ import {UPDATE_LIST_NOTE,
     SET_SEARCH,
     UNSET_SEARCH,
     REMOVE_FROM_LIST,
+    SAVE_USER_AUTH,
 } from '../actions/noteAction';
 import { findIndex } from 'lodash';
 import update from 'immutability-helper';
 import {EditorState} from 'draft-js';
 
 const noteReducer = (state =
-  {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {}, shouldSave: false, editorState: EditorState.createEmpty()}, action) => {
-  console.log('noteReducer:', action.type)
+  {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {}, 
+    shouldSave: false, editorState: EditorState.createEmpty(), userAuth: null}, action) => {
+  
   switch (action.type) {
+    case SAVE_USER_AUTH:
+      console.log('noteReducer:SAVE_USER_AUTH:', action.payload);
+      return {...state, userAuth: action.payload};
+      break;
     case REMOVE_FROM_LIST:
       var indexNoteActive = findIndex(state.notes, (note) => {
         return note._id == action.payload;
