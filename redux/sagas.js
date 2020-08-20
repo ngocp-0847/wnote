@@ -78,6 +78,7 @@ function* fnLoadDefineIdentity() {
     if (resAuth.code == 200) {
         console.log('fnLoadDefineIdentity:', resAuth.data);
         if (resAuth.data == false) {
+            yield call(Router.push, `/w/login`);
             return false;
         } else {
             yield put(saveUserAuth(resAuth.data));

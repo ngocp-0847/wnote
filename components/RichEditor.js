@@ -134,8 +134,35 @@ export class RichEditor extends React.Component {
     return 'not-handled';
   };
 
+  getEntities = (editorState, entityType = null) => {
+      const content = editorState.getCurrentContent();
+      const entities = [];
+      content.getBlocksAsArray().forEach((block) => {
+          let selectedEntity = null;
+          block.findEntityRanges(
+              (character) => {
+                  if (character.getEntity() !== null) {
+                      const entity = content.getEntity(character.getEntity());
+                      if (!entityType || (entityType && entity.getType() === entityType)) {
+                          selectedEntity = {
+                              entityKey: character.getEntity(),
+                              blockKey: block.getKey(),
+                              entity: content.getEntity(character.getEntity()),
+                          };
+                          return true;
+                      }
+                  }
+                  return false;
+              },
+              (start, end) => {
+                  entities.push({...selectedEntity, start, end});
+              });
+      });
+      return entities;
+  };
+
   onChange = editorState => {
-    console.log('onChange:', getAllBlocks(editorState).toJS())
+    console.log('onChange:', getAllBlocks(editorState).toJS(), getEntities(editorState))
     this.props.onChange(editorState);
   };
 
@@ -278,11 +305,10 @@ export class RichEditor extends React.Component {
     if (currentBlock.getType() == 'code-block') {
       const newContentState = Modifier.replaceText(contentState, selectionState, text.trim());
       const newEditorState = EditorState.push(editorState, newContentState, 'insert-fragment');
-      console.log('handlePastedText:addBlock:', getAllBlocks(newEditorState).toJS());
+      // console.log('handlePastedText:addBlock:', getAllBlocks(newEditorState).toJS());
       this.onChange(newEditorState);
       return 'handled';
     } else {
-      console.log('handlePastedText:beforeConvert:', text, html);
       if (html) {
         const blocksFromHTML = convertFromHTML(html);
         const state = ContentState.createFromBlockArray(
@@ -290,9 +316,7 @@ export class RichEditor extends React.Component {
           blocksFromHTML.entityMap,
         );
         this.onChange(appendBlocks(editorState, blocksFromHTML.contentBlocks, blocksFromHTML.entityMap));
-        console.log('handlePastedText:blocksFromHTML:',
-          blocksFromHTML.contentBlocks
-          );
+        console.log('handlePastedText:blocksFromHTML:', blocksFromHTML.contentBlocks);
         return true;
       } else {
         let newContentState = Modifier.replaceText(

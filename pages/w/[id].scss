@@ -29,6 +29,15 @@
       font-size: 12px;
       padding: 5px;
     }
+    #wr-ar-lo{
+      color: white;
+      background-color: #9e9191;
+      font-size: 13px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      height: 27px;
+      cursor: pointer;
+    }
     #btn-login{
       align-self: center;
       border-radius: 3px;
@@ -79,11 +88,7 @@ main {
   height: 100%;
   width: 100%;
 }
-// main .sidebar-pin{
-//   height: 100%;
-//   width: 170px;
-//   background-color: blue;
-// }
+
 main .sidebar-note {
   width: 240px;
   background-color: #f0f8ff;
@@ -158,4 +163,13 @@ main .main-note {
       }
     }
   }
+}
+
+#login-github{
+  background-color: #040404;
+  padding: 10px 20px;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
 }

@@ -134,85 +134,77 @@ function WID(props) {
         props.deleteNote(props.noteActive._id);
     };
 
+    let router = useRouter()
+    let logout = (e) => {
+        router.push('/api/auth/logout')
+    }
+
     const styleNotImage = {maxWidth: '100%'};
     const styleHasImage = {maxWidth: '122px'};
 
-    let router = useRouter();
-
-    let login = () => {
-        router.push('/api/auth/github')
-    };
-
-    const isLogin = props.userAuth == null ? false : true;
-    let areaAuth = null;
-    if (isLogin) {
-        areaAuth = (<div className="auth">
-                <span id="avatar"><img src={props.userAuth._source.photos[0].value} className="re-img"/></span>
-                <span id="name-auth" >{props.userAuth._source.username}</span>
-            </div>);
-    } else {
-        areaAuth = (<div className="auth">
-                <button id="btn-login" onClick={login}>Login</button>
-            </div>);
-    }
-    
     return (
         <main>
             <div className="sidebar-note">
-            <div className="inner-list-note">
-                <p id="header-ln">notes</p>
-                <div className="wr-hei-note">
-                <div className="list-note">
-                    {
-                        props.notes && props.notes.map((note, i) => {
-
-                        let styleText = styleNotImage;
-                        if (note._source && note._source.shortContent 
-                            && note._source.shortContent.shortImage) {
-                            styleText = styleHasImage;
-                        }
-                        return (
-                            <div key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
-                                onClick={activeNoteSidebar.bind(this, note)}>
-                            <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
+                <div className="inner-list-note">
+                    <p id="header-ln">notes</p>
+                    <div className="wr-hei-note">
+                        <div className="list-note">
                             {
-                                (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
-                                (
-                                <div className="image-s">
-                                    <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
-                                </div>
+                                props.notes && props.notes.map((note, i) => {
+
+                                let styleText = styleNotImage;
+                                if (note._source && note._source.shortContent 
+                                    && note._source.shortContent.shortImage) {
+                                    styleText = styleHasImage;
+                                }
+                                return (
+                                    <div key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
+                                        onClick={activeNoteSidebar.bind(this, note)}>
+                                    <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
+                                    {
+                                        (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
+                                        (
+                                        <div className="image-s">
+                                            <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
+                                        </div>
+                                        )
+                                    }
+                                    </div>
                                 )
+                                })
                             }
-                            </div>
-                        )
-                        })
-                    }
+                        </div>
+                    </div>
                 </div>
-                </div>
-            </div>
             </div>
             <div className="main-note">
-            <div id="header-editor">
-                <button id="btn-n-note" onClick={onNewNote}>New</button>
-                <div className="wrap-search">
-                    <input name="input-search" className="input-search" placeholder="Search" onChange={search} />
+                <div id="header-editor">
+                    <button id="btn-n-note" onClick={onNewNote}>New</button>
+                    <div className="wrap-search">
+                        <input name="input-search" className="input-search" placeholder="Search" onChange={search} />
+                    </div>
+                    <div id="con-r">
+                        <button id="btn-d-no" onClick={deleteNote}>Delete</button>
+                    </div>
+                    <div className="auth">
+                        <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img"/></span>
+                        <span id="name-auth" >{props.userAuth && props.userAuth._source.username}</span>
+                        <div id="wr-ar-lo" >
+                            <a onClick={logout} id="btn-logout">Logout</a>
+                        </div>
+                    </div>
                 </div>
-                <div id="con-r">
-                    <button id="btn-d-no" onClick={deleteNote}>Delete</button>
-                </div>
-                {areaAuth}
-            </div>
-            <NoSSR>
-                <div className="editor">
-                <RichEditor
-                    editorState={props.editorState}
-                    onChange={onChangeEditor}
-                    ref={element => {
-                        setEditor(element)
-                    }}
-                    />
-                </div>
-            </NoSSR>
+                <NoSSR>
+                    <div className="editor">
+                    <RichEditor
+                        editorState={props.editorState}
+                        onChange={onChangeEditor}
+                        ref={element => {
+                            setEditor(element)
+                        }}
+                        />
+                    </div>
+                </NoSSR>
             </div>
         </main>
     )
@@ -243,25 +235,3 @@ const mapDispatchToProps = {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));
-
-// export async function getServerSideProps(ctx) {
-//     const { passportSession } = nextCookie(ctx);
-//     console.log('[id]:getServerSideProps:passportSession:', passportSession);
-//     let user = null;
-//     if (passportSession) {
-//         const serializedCookie = Buffer.from(passportSession, 'base64').toString();
-//         const {
-//             passport: { user },
-//         } = JSON.parse(serializedCookie);
-//         console.log('getServerSideProps:user:', user);
-//         if (!user) {
-//             redirectToLogin(ctx);
-//         }
-//     } else {
-//         redirectToLogin(ctx);
-//     }
-    
-//     return {
-//         props: {user},
-//     }
-// }

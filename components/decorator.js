@@ -39,9 +39,10 @@ export const Image = (props) => {
   }
 
   let content = (<img />);
-
+  console.log('Image:entityKey', entityKey)
   if (entityKey) {
     const entity = contentState.getEntity(entityKey);
+    console.log('Image:entity', entity, entity.getData())
     let {height, src, width, style} = entity.getData();
     const type = entity.getType();
     if (!style) {

@@ -9,7 +9,6 @@ import {Provider} from 'react-redux';
 import React from 'react';
 import withRedux from "next-redux-wrapper";
 import store from '../redux/store';
-import withIdentity from '../lib/withIdentity';
 import nextCookie from 'next-cookies';
 
 class MyApp extends App {
@@ -20,33 +19,6 @@ class MyApp extends App {
 
         //Anything returned here can be accessed by the client
         return {pageProps: pageProps};
-    }
-
-    static async getServerSideProps(ctx) {
-        console.log('getServerSideProps:ctx:');
-        const { passportSession } = nextCookie(ctx.ctx);
-        return {
-            props: {},
-        }
-
-        let session = null
-        if (!passportSession) {
-            return {
-                props: {},
-            }
-        }
-
-        const serializedCookie = Buffer.from(passportSession, 'base64').toString()
-
-        const {
-            passport: { user },
-        } = JSON.parse(serializedCookie)
-        // redirect to login if cookie exists but is empty
-        if (!user) {
-            redirectToLogin(ctx.ctx)
-        }
-
-        session = user
     }
 
     render() {
