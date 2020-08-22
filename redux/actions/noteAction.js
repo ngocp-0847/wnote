@@ -21,6 +21,7 @@ export const DELETE_NOTE = 'DELETE_NOTE';
 export const REMOVE_FROM_LIST = 'REMOVE_FROM_LIST';
 export const LOAD_DEFINE_IDENTITY = 'LOAD_DEFINE_IDENTITY';
 export const SAVE_USER_AUTH = 'SAVE_USER_AUTH';
+export const INIT_DETAIL_NOTE = 'INIT_DETAIL_NOTE';
 
 export const [
   loadListNote,
@@ -43,6 +44,7 @@ export const [
   removeFromList,
   loadDefineIdentity,
   saveUserAuth,
+  initDetailnote,
   ] = [
   createAction(LOAD_LIST_NOTE),
   createAction(UPDATE_LIST_NOTE),
@@ -64,5 +66,6 @@ export const [
   createAction(REMOVE_FROM_LIST),
   createAction(LOAD_DEFINE_IDENTITY),
   createAction(SAVE_USER_AUTH),
+  createAction(INIT_DETAIL_NOTE),
 ];
 

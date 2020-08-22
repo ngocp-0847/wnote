@@ -1,8 +1,7 @@
 import Layout from '../components/layout.js';
-import React, { Component } from 'react';
-import {EditorState} from 'draft-js';
+import React from 'react';
 import { withRouter, useRouter} from 'next/router';
-import {loadNoteLatest, loadDefineIdentity} from '../redux/actions/noteAction';
+import {loadNoteLatest} from '../redux/actions/noteAction';
 import {connect} from 'react-redux';
 
 function W(props) {
@@ -21,7 +20,6 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = {
     loadNoteLatest: loadNoteLatest,
-    loadDefineIdentity: loadDefineIdentity,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(W)));

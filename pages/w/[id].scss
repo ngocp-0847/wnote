@@ -146,7 +146,7 @@ main .main-note {
   height: 100%;
   .editor{
     flex: 1;
-    height: calc(100% - 53px);
+    height: calc(100% - 93px);
     .wrap-editor{
       flex: 1;
       height:  100%;
@@ -162,14 +162,45 @@ main .main-note {
         }
       }
     }
+    .quill {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      .ql-container{
+        height: 100%;
+        overflow-y: scroll;
+        font-size: 15px;
+        .ql-editor{
+          img{
+            max-width: 100%;
+            height: auto;
+          }
+        }
+      }
+    }
   }
 }
 
-#login-github{
-  background-color: #040404;
-  padding: 10px 20px;
-  color: white;
-  font-weight: bold;
-  border-radius: 4px;
-  cursor: pointer;
+.area-login{
+  .recomme{
+    .icon-home{
+      height: 150px;
+      margin-bottom: 20px;
+    }
+    .guide-l{
+      display: flex;
+      .btn-login{
+        padding-top: 32px;
+        padding-left: 20px;
+      }
+    }
+  }
+  #login-github{
+    background-color: #040404;
+    padding: 10px 20px;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+  }  
 }

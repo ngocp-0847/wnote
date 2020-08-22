@@ -1,6 +1,12 @@
+import Head from 'next/head';
+
 const withLayout = (Page) => {
   return (props) => (
       <div className="container">
+        <Head>
+          <title>Note everything</title>
+          <link rel="icon" href="/png-clipart-computer-icons-bookmark-favicon-icon-free-bookmark-miscellaneous-angle.png" />
+        </Head>
         <Page {...props} />
         <style jsx global>{`
           html,

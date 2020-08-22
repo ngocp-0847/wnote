@@ -111,6 +111,7 @@ export function appendBlocks(editorState, mixBlocks, entityMap) {
     );
   console.log('appendBlocks:', contentState.getBlockMap().toJS(), entityMap.all());
   for (let [key, value] of Object.entries(entityMap.all())) {
+    console.log('appendBlocks:key_paste', key)
     currentContentState = currentContentState.addEntity(entityMap.get(key));
   }
 

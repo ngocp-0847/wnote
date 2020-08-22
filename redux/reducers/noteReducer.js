@@ -13,9 +13,9 @@ import update from 'immutability-helper';
 import {EditorState} from 'draft-js';
 
 const noteReducer = (state =
-  {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {}, 
-    shouldSave: false, editorState: EditorState.createEmpty(), userAuth: null}, action) => {
-  
+  {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {},
+    shouldSave: false, editorState: '', userAuth: null}, action) => {
+
   switch (action.type) {
     case SAVE_USER_AUTH:
       console.log('noteReducer:SAVE_USER_AUTH:', action.payload);

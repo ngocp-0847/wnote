@@ -5,7 +5,7 @@ import withPassport from '../../../lib/withPassport';
 
 /**
  * Save user if not exists.
- * @param {} body 
+ * @param {} body
  */
 async function querySaveUser(body) {
   const {userID} = body;
@@ -18,6 +18,7 @@ async function querySaveUser(body) {
 }
 
 async function searchLastest(userObj) {
+  console.log('userObj:', userObj)
   return client.search({
     index: 'wnote',
     body: {
@@ -44,7 +45,12 @@ async function searchLastest(userObj) {
 
 export default withPassport(async (req, res) => {
   if (req.method === 'POST') {
-    let noteLatest = await searchLastest(req.user);
-    responseSuccess(res, {noteLatest: noteLatest, userObj: req.user});
+    try {
+      let noteLatest = await searchLastest(req.user);
+      console.log('noteLatest:', noteLatest)
+      responseSuccess(res, {noteLatest: noteLatest, userObj: req.user});
+    } catch (e) {
+      responseError(res, 'dont have note latest');
+    }
   }
 })

@@ -18,15 +18,14 @@ import {
   removeFromList,
   loadDefineIdentity,
   saveUserAuth,
+  initDetailnote,
 } from './actions/noteAction';
 import noteService from './services/noteService.js';
 import authService from './services/authService.js';
-import {EditorState, convertFromRaw} from 'draft-js';
 import request from './requestHelper';
 import Router from 'next/router';
 import uuidv4 from 'uuid/v4';
 import { isEmpty } from 'lodash';
-import {createWithContent} from '../components/decorator';
 
 import es6promise from 'es6-promise';
 import 'isomorphic-unfetch';
@@ -50,25 +49,20 @@ function* fnSaveNote({payload}) {
 
 function* fnLoadListNote({payload}) {
   try {
-    var body = {
-      userID: payload
-    }
-    const data = yield request('/api/note', {
-      method: 'POST', // *GET, POST, PUT, DELETE, etc.
-      mode: 'cors', // no-cors, *cors, same-origin
-      cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-      credentials: 'same-origin', // include, *same-origin, omit
-      headers: {
-          'Content-Type': 'application/json'
-          // 'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      redirect: 'follow', // manual, *follow, error
-      referrerPolicy: 'no-referrer', // no-referrer, *client
-      body: JSON.stringify(body) // body data type must match "Content-Type" header
-    });
+    console.log('fnLoadListNote:', payload)
+    const data = yield noteService.fnLoadListNote(payload);
     yield put(updateListNote(data.data));
   } catch (error) {
     yield put(getDataFail(error));
+  }
+}
+
+function* fnInitDetailnote({payload}) {
+  let userAuth = yield fnLoadDefineIdentity()
+  console.log('fnInitDetailnote:', payload, userAuth);
+  if (userAuth) {
+    yield fnLoadListNote({payload: userAuth._source.userGeneId});
+    yield fnLoadNoteById({payload: {noteID: payload.noteID}})
   }
 }
 
@@ -90,42 +84,28 @@ function* fnLoadDefineIdentity() {
 
 function* fnLoadNoteLastest(action) {
     const userAuth = yield fnLoadDefineIdentity();
-    console.log('fnLoadNoteLastest:userAuth:', userAuth, action.payload);
     if (userAuth == false) {
-        action.payload.push('/api/auth/github');
+      yield call(Router.push, `/w/login`);
+      return false;
     }
     let noteID = uuidv4();
     yield put(changeStatusForSave(true));
-
-    var body = {
-        userID: userAuth.userGeneId,
-    }
-    const data = yield request('/api/note/latest', {
-        method: 'POST', // *GET, POST, PUT, DELETE, etc.
-        mode: 'cors', // no-cors, *cors, same-origin
-        cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-        credentials: 'same-origin', // include, *same-origin, omit
-        headers: {
-            'Content-Type': 'application/json'
-            // 'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        redirect: 'follow', // manual, *follow, error
-        referrerPolicy: 'no-referrer', // no-referrer, *client
-        body: JSON.stringify(body) // body data type must match "Content-Type" header
-    });
-    console.log('fnLoadNoteLastest:request:', data)
+    const data = yield noteService.fnLoadNoteLastest(userAuth.userGeneId)
+    console.log('fnLoadNoteLastest:', data)
     if (data.code == 200) {
         let rawdata = data.data;
         var hits = rawdata.noteLatest.body.hits.hits;
         if (hits.length != 0) {
         noteID = hits[0]._id
         yield put(fillNoteActive(hits[0]));
-        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+        yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
         yield put(changeStatusForSave(true));
         } else {
-        const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+        yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
         yield put(changeStatusForSave(true));
         }
+    } else {
+      yield fnNewEmptyNote();
     }
 }
 
@@ -133,8 +113,8 @@ function* fnNewEmptyNote() {
   var noteID = uuidv4();
   console.log('fnNewEmptyNote:', noteID)
   yield put(changeStatusForSave(false)); //cancel save editor.
-  const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-  var editorState = EditorState.createEmpty();
+  yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+  var editorState = '';
   yield put(updateEditorState(editorState));
   var body = {
     'content': '',
@@ -153,41 +133,28 @@ function* fnNewEmptyNote() {
 }
 
 function* fnLoadNoteById({ payload }) {
-  var userID = localStorage.getItem('userID');
-  const data = yield request('/api/note/'+payload.noteID+'?userID='+userID, {
-    method: 'GET', // *GET, POST, PUT, DELETE, etc.
-    mode: 'cors', // no-cors, *cors, same-origin
-    cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-    credentials: 'same-origin', // include, *same-origin, omit
-    headers: {
-        'Content-Type': 'application/json'
-        // 'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    redirect: 'follow', // manual, *follow, error
-    referrerPolicy: 'no-referrer', // no-referrer, *client
-  });
+  console.log('fnLoadNoteById:', payload)
+  let userID = yield select((state => state.note.userAuth._source.userGeneId)); 
+  const data = yield noteService.fnLoadNoteByID(payload.noteID, userID);
 
   if (data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     try {
-      const state = convertFromRaw(JSON.parse(data.hits[0]._source.content));
-      var editorState = createWithContent(state);
-      yield put(updateEditorState(editorState));
+      yield put(updateEditorState(''));
+      yield put(updateEditorState(data.hits[0]._source.content));
     } catch(e) {
       console.log('fnLoadNoteById:catch:', e);
-      var editorState = EditorState.createEmpty();
-      yield put(updateEditorState(editorState));
+      yield put(updateEditorState(''));
     }
   }
-
   yield put(changeStatusForSave(true));
 }
 
 function* fnActiveNoteSidebar({ payload }) {
   console.log('fnActiveNoteSidebar', payload)
   yield put(changeStatusForSave(false)); //cancel save editor.
-  const responseRouter = yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
-  yield* fnLoadNoteById({payload: {noteID: payload._id}})
+  yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
+  yield fnLoadNoteById({payload: {noteID: payload._id}})
 }
 
 function* fnSearch({ payload }) {
@@ -214,6 +181,7 @@ function* fnUnSearch() {
 
 function* fnDeleteNote({ payload }) {
   console.log('fnDeleteNote:',payload);
+  yield put(changeStatusForSave(false));
   let userID = localStorage.getItem('userID');
   let body = {
     userID: localStorage.getItem('userID'),
@@ -232,13 +200,15 @@ function* fnDeleteNote({ payload }) {
       yield* fnLoadNoteById({payload: {noteID: noteLatestState._id}});
     }
   }
+  yield put(changeStatusForSave(true));
 }
 
 // notice how we now only export the rootSaga
 // single entry point to start all Sagas at once
-export default function* rootSaga() {
-  console.log('rootSaga', startSaveNote().type)
+export default function* rootSaga(context) {
+  console.log('rootSaga', context)
   yield all([
+    takeLatest(initDetailnote().type, fnInitDetailnote),
     takeLatest(loadDefineIdentity().type, fnLoadDefineIdentity),
     takeLatest(startSaveNote().type, fnSaveNote),
     takeLatest(loadListNote().type, fnLoadListNote),
