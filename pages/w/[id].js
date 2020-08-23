@@ -22,11 +22,38 @@ import classNames from 'classnames';
 import {debounce} from 'lodash';
 import 'react-quill/dist/quill.snow.css';
 
+
 class FormHtmlEditor extends Component {
   constructor(props) {
     super(props)
     if (document) {
         this.quill = require('react-quill');
+        var Block = this.quill.Quill.import('blots/block');
+        const Delta = this.quill.Quill.import("delta");
+        const Break = this.quill.Quill.import("blots/break");
+        const Embed = this.quill.Quill.import("blots/embed");
+        const lineBreakMatcher = () => {
+            let newDelta = new Delta();
+            newDelta.insert({ break: "" });
+            return newDelta;
+          };
+        
+        class SmartBreak extends Break {
+            length() {
+                return 1;
+            }
+            value() {
+                return "\n";
+            }
+            
+            insertInto(parent, ref) {
+                Embed.prototype.insertInto.call(this, parent, ref);
+            }
+        }
+        
+        SmartBreak.blotName = "break";
+        SmartBreak.tagName = "BR";
+        this.quill.Quill.register(SmartBreak);
         this.refQuill = null;
     }
   }
@@ -76,6 +103,7 @@ function WID(props) {
     const [eventText, setEventText] = useState('');
     const reactQuillRef = useRef();
     const initFlag = useRef(true);
+    let router = useRouter();
 
     let onNewNote = () => {
         props.newEmptyNote();
@@ -114,8 +142,18 @@ function WID(props) {
     }, [props.editorState]);
 
     useEffect(() => {
+        console.log('componentDid:props.router:', props.router);
         props.initDetailnote({noteID: props.router.query.id});
     }, []);
+
+    useEffect(() => {
+        console.log('query:change:');
+        if (reactQuillRef.current != null) {
+            console.log('setSelection:');
+            reactQuillRef.current.getEditor().setSelection(0);
+            reactQuillRef.current.getEditor().setContents([{ insert: '\n' }]);
+        }
+    }, [router.query.id]);
 
     let activeNoteSidebar = (note) => {
         props.activeNoteSidebar(note)
@@ -146,7 +184,6 @@ function WID(props) {
         props.deleteNote(props.noteActive._id);
     };
 
-    let router = useRouter()
     let logout = (e) => {
         router.push('/api/auth/logout')
     }

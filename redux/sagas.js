@@ -140,7 +140,7 @@ function* fnLoadNoteById({ payload }) {
   if (data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     try {
-      yield put(updateEditorState(''));
+      // yield put(updateEditorState(''));
       yield put(updateEditorState(data.hits[0]._source.content));
     } catch(e) {
       console.log('fnLoadNoteById:catch:', e);
