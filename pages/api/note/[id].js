@@ -57,8 +57,8 @@ const handler = (req, res) => {
         }
     });
   } else if (req.method == 'GET') {
-    const { id, userID } = req.query;
-    console.log('GET notedetail:', id, userID)
+    const { id } = req.query;
+    console.log('GET notedetail:', id, req.user)
     client.search({
       index: 'wnote',
       body: {
@@ -66,7 +66,7 @@ const handler = (req, res) => {
           bool: {
             must: [
               {match: {_id: id}},
-              {match: {userID: userID}}
+              {match: {userID: req.user._source.userGeneId}}
             ]
           }
         },

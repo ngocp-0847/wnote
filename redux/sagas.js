@@ -134,13 +134,14 @@ function* fnNewEmptyNote() {
 
 function* fnLoadNoteById({ payload }) {
   console.log('fnLoadNoteById:', payload)
-  let userID = yield select((state => state.note.userAuth._source.userGeneId)); 
-  const data = yield noteService.fnLoadNoteByID(payload.noteID, userID);
+  const data = yield noteService.fnLoadNoteByID(payload.noteID);
 
   if (data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     try {
-      // yield put(updateEditorState(''));
+      // console.log('fnLoadNoteById:beforeClearContent:');
+      yield put(updateEditorState(''));
+      console.log('fnLoadNoteById:beforeSetContent:');
       yield put(updateEditorState(data.hits[0]._source.content));
     } catch(e) {
       console.log('fnLoadNoteById:catch:', e);
@@ -182,9 +183,7 @@ function* fnUnSearch() {
 function* fnDeleteNote({ payload }) {
   console.log('fnDeleteNote:',payload);
   yield put(changeStatusForSave(false));
-  let userID = localStorage.getItem('userID');
   let body = {
-    userID: localStorage.getItem('userID'),
     noteID: payload,
   }
   const results = yield call([noteService, 'deleteNote'], body);

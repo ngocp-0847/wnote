@@ -1,8 +1,8 @@
 import request from '../requestHelper';
 
 export default {
-  fnLoadNoteByID(noteID, userID) {
-    return request('/api/note/'+noteID+'?userID='+userID, {
+  fnLoadNoteByID(noteID) {
+    return request('/api/note/'+noteID, {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
       mode: 'cors', // no-cors, *cors, same-origin
       cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached

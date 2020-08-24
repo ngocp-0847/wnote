@@ -22,43 +22,25 @@ import classNames from 'classnames';
 import {debounce} from 'lodash';
 import 'react-quill/dist/quill.snow.css';
 
+import highlight from 'highlight.js';
+import 'highlight.js/styles/github-gist.css';
 
 class FormHtmlEditor extends Component {
   constructor(props) {
     super(props)
     if (document) {
+        highlight.configure({
+            languages: ['javascript'],
+        })
         this.quill = require('react-quill');
-        var Block = this.quill.Quill.import('blots/block');
-        const Delta = this.quill.Quill.import("delta");
-        const Break = this.quill.Quill.import("blots/break");
-        const Embed = this.quill.Quill.import("blots/embed");
-        const lineBreakMatcher = () => {
-            let newDelta = new Delta();
-            newDelta.insert({ break: "" });
-            return newDelta;
-          };
-        
-        class SmartBreak extends Break {
-            length() {
-                return 1;
-            }
-            value() {
-                return "\n";
-            }
-            
-            insertInto(parent, ref) {
-                Embed.prototype.insertInto.call(this, parent, ref);
-            }
-        }
-        
-        SmartBreak.blotName = "break";
-        SmartBreak.tagName = "BR";
-        this.quill.Quill.register(SmartBreak);
         this.refQuill = null;
     }
   }
 
   modules = {
+    syntax: {
+        highlight: text => highlight.highlightAuto(text).value,
+    },
     toolbar: [
         ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
         ['blockquote', 'code-block'],
@@ -71,16 +53,16 @@ class FormHtmlEditor extends Component {
         [{ 'align': [] }],
         ['clean']  
     ],
+    clipboard: {
+        matchVisual: false,
+    },
   }
-
   getRef() {
     return this.refQuill
   }
-
   getEditor() {
     return this.refQuill.getEditor()
   }
-
   render() {
     const Quill = this.quill
     if (Quill) {
@@ -89,8 +71,8 @@ class FormHtmlEditor extends Component {
             modules={this.modules}
             ref={(e) => {this.refQuill = e}}
             onChange={this.props.onChange}
-            theme="snow"
             value={this.props.value}
+            theme='snow'
         />
       )
     } else {
@@ -151,7 +133,7 @@ function WID(props) {
         if (reactQuillRef.current != null) {
             console.log('setSelection:');
             reactQuillRef.current.getEditor().setSelection(0);
-            reactQuillRef.current.getEditor().setContents([{ insert: '\n' }]);
+            // reactQuillRef.current.getEditor().setContents([{ insert: '\n' }]);
         }
     }, [router.query.id]);
 
