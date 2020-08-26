@@ -1,7 +1,5 @@
 import withPassport from '../../../lib/withPassport'
 
-import {responseSuccess} from '../util';
-
 const handler = async (req, res) => {
     req.logout();
     req.session.destroy();

@@ -1,5 +1,6 @@
-const { Client } = require('@elastic/elasticsearch')
-const client = new Client({ node: process.env.ES_HOST })
+const { Client } = require('@elastic/elasticsearch');
+const client = new Client({ node: process.env.ES_HOST });
+import {responseError, responseSuccess} from '../util';
 
 function sanitizeValue(value) {
   return value
@@ -36,14 +37,10 @@ export default (req, res) => {
       }
     },function(error, response, status) {
         if (error){
-          res.statusCode = 500
-          res.setHeader('Content-Type', 'application/json')
-          res.status(500).json(error)
-          console.log("index error: "+error)
+          responseError(res, error);
+          console.log("index error: ", error);
         } else {
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.status(200).json(response.body.hits)
+          responseSuccess(res, response.body.hits);
         }
     });
   }

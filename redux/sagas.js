@@ -22,7 +22,6 @@ import {
 } from './actions/noteAction';
 import noteService from './services/noteService.js';
 import authService from './services/authService.js';
-import request from './requestHelper';
 import Router from 'next/router';
 import uuidv4 from 'uuid/v4';
 import { isEmpty } from 'lodash';
@@ -166,8 +165,8 @@ function* fnSearch({ payload }) {
   }
   const results = yield call([noteService, 'fnSearch'], body);
   console.log('fnSearch:call', results)
-  yield put(updateListNote(results.hits));
-  let noteLastest = !isEmpty(results.hits) ? results.hits[0] : null;
+  yield put(updateListNote(results.data.hits));
+  let noteLastest = !isEmpty(results.data.hits) ? results.data.hits[0] : null;
   console.log('fnSearch:noteLastest:', noteLastest);
   if (noteLastest) {
     yield* fnActiveNoteSidebar({payload: {_id: noteLastest._id}});

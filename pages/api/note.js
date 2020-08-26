@@ -1,6 +1,6 @@
 const { Client } = require('@elastic/elasticsearch')
 const client = new Client({ node: process.env.ES_HOST })
-import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from './util';
+import {responseError, responseSuccess} from './util';
 
 export default (req, res) => {
   if (req.method === 'POST') {
@@ -34,9 +34,7 @@ export default (req, res) => {
         }
         else {
           console.log("--- Response ---");
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.status(200).json({ data: response.body.hits.hits })
+          responseSuccess(res, response.body.hits.hits);
         }
     });
 

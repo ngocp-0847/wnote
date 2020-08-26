@@ -1,5 +1,5 @@
 import client from '../../../lib/es';
-import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
+import {responseError, responseSuccess} from '../util';
 import { v4 as uuidv4 } from 'uuid';
 import withPassport from '../../../lib/withPassport';
 
