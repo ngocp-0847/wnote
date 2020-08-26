@@ -12,7 +12,7 @@ export const config = {
 }
 
 const handler = (req, res) => {
-  console.log('api:[id]:', req.method, req.body);
+  console.log('api:[id]:', req.method);
 
   if (req.method === 'DELETE') {
     client.update({

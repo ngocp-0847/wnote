@@ -28,7 +28,7 @@ export default (req, res) => {
         size: 20,
       }
     },function (error, response, status) {
-        if (error){
+        if (error) {
           responseError(res, error);
           console.log("search error: "+error)
         }

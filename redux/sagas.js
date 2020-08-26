@@ -140,7 +140,6 @@ function* fnLoadNoteById({ payload }) {
     yield put(fillNoteActive(data.hits[0]));
     try {
       // console.log('fnLoadNoteById:beforeClearContent:');
-      yield put(updateEditorState(''));
       console.log('fnLoadNoteById:beforeSetContent:');
       yield put(updateEditorState(data.hits[0]._source.content));
     } catch(e) {
@@ -154,6 +153,7 @@ function* fnLoadNoteById({ payload }) {
 function* fnActiveNoteSidebar({ payload }) {
   console.log('fnActiveNoteSidebar', payload)
   yield put(changeStatusForSave(false)); //cancel save editor.
+  yield put(updateEditorState(''));
   yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
   yield fnLoadNoteById({payload: {noteID: payload._id}})
 }

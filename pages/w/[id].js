@@ -1,7 +1,7 @@
 import Layout from '../../components/layout.js';
 import React, { useEffect, useState, useRef, Component } from 'react';
 import NoSSR from 'react-no-ssr';
-import Router, { useRouter, withRouter } from 'next/router';
+import { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
 
 import {
@@ -18,6 +18,7 @@ import {
   loadDefineIdentity,
   initDetailnote
 } from '../../redux/actions/noteAction';
+
 import classNames from 'classnames';
 import {debounce} from 'lodash';
 import 'react-quill/dist/quill.snow.css';
@@ -33,6 +34,10 @@ class FormHtmlEditor extends Component {
             languages: ['javascript'],
         })
         this.quill = require('react-quill');
+        const ImageUploader = require('../../quill-image-uploader/src/quill.imageUploader');
+        this.quill.Quill.register({
+            "modules/imageUploader": ImageUploader.default,
+        });
         this.refQuill = null;
     }
   }
@@ -55,6 +60,29 @@ class FormHtmlEditor extends Component {
     ],
     clipboard: {
         matchVisual: false,
+    },
+    imageUploader: {
+        upload: file => {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append("image", file);
+                fetch("/api/note/upload",
+                  {
+                    method: "POST",
+                    body: formData
+                  }
+                )
+                  .then(response => response.json())
+                  .then(result => {
+                    console.log(result);
+                    resolve(result.data.uri);
+                  })
+                  .catch(error => {
+                    reject("Upload failed");
+                    console.error("Error:", error);
+                  });
+            });
+        }
     },
   }
   getRef() {
@@ -112,9 +140,7 @@ function WID(props) {
     let debouncePush = debounce(pushToService, 300);
 
     let onChangeEditor = (editorState) => {
-        if (props.shouldSave) {
-            props.updateEditorState(editorState);
-        }
+        props.updateEditorState(editorState);
     };
 
     useEffect(() => {
