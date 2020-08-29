@@ -10,9 +10,9 @@
     align-self: center;
     border-radius: 3px;
     margin: 0px 5px;
-    padding: 5px 12px;
     cursor: pointer;
-    background-color: #5890ff;
+    padding: 6px 12px;
+    background-color: #79c2de;
     color: white;
     font-weight: bold;
   }
@@ -67,9 +67,8 @@
 .wrap-search{
   margin-left: 15px;
   .input-search{
-    width: 260px;
-    height: 27px;
-    border-radius: 1px;
+    width: 360px;
+    height: 32px;
   }
 }
 
@@ -90,8 +89,8 @@ main {
 }
 
 main .sidebar-note {
-  width: 240px;
-  background-color: #f0f8ff;
+  width: 245px;
+  background-color: #f4f5f7;
   flex: 0 0 auto;
   .inner-list-note{
     height: 100%;
@@ -169,7 +168,7 @@ main .main-note {
       .ql-container{
         height: 100%;
         overflow-y: scroll;
-        font-size: 15px;
+        font-size: 16px;
         .ql-editor{
           img{
             max-width: 100%;
@@ -178,11 +177,25 @@ main .main-note {
           pre.ql-syntax{
             background-color: #fbfbfb;
             color: black;
+            border: 1px solid #C0C0C0;
           }
         }
       }
     }
   }
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before {
+  content: 'Normal';
+  font-size: 16px !important;
+}
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before {
+  content: 'Large';
+  font-size: 18px !important;
+}
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before {
+  content: 'Huge';
+  font-size: 20px !important;
 }
 
 .area-login{

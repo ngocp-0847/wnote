@@ -26,15 +26,22 @@ import 'react-quill/dist/quill.snow.css';
 import highlight from 'highlight.js';
 import 'highlight.js/styles/github-gist.css';
 
+import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
+import Loader from 'react-loader-spinner';
+
 class FormHtmlEditor extends Component {
   constructor(props) {
     super(props)
     if (document) {
         highlight.configure({
-            languages: ['javascript'],
+            languages: ['javascript', 'php'],
         })
         this.quill = require('react-quill');
         const ImageUploader = require('../../quill-image-uploader/src/quill.imageUploader');
+        var Size = this.quill.Quill.import('attributors/style/size');
+        Size.whitelist = ['16px', '18px', '20px'];
+        this.quill.Quill.register(Size, true);
+
         this.quill.Quill.register({
             "modules/imageUploader": ImageUploader.default,
         });
@@ -52,7 +59,8 @@ class FormHtmlEditor extends Component {
         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
         ['link', 'image'],
         [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
-        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        [{ 'size': ['16px', '18px', '20px'] }],
+        [{ 'header': [1, 2, 3, 4, false] }],
         [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
         [{ 'font': [] }],
         [{ 'align': [] }],
@@ -158,8 +166,6 @@ function WID(props) {
         console.log('query:change:');
         if (reactQuillRef.current != null) {
             console.log('setSelection:');
-            reactQuillRef.current.getEditor().setSelection(0);
-            // reactQuillRef.current.getEditor().setContents([{ insert: '\n' }]);
         }
     }, [router.query.id]);
 
@@ -253,6 +259,7 @@ function WID(props) {
                 </div>
                 <NoSSR>
                     <div className="editor">
+                        {!props.shouldSave && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
                         <FormHtmlEditor value={props.editorState}
                             ref={reactQuillRef}
                             onChange={onChangeEditor} />
