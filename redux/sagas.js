@@ -19,6 +19,9 @@ import {
   loadDefineIdentity,
   saveUserAuth,
   initDetailnote,
+  saveNotePinned,
+  pinNote,
+  updateItemNotePin
 } from './actions/noteAction';
 import noteService from './services/noteService.js';
 import authService from './services/authService.js';
@@ -46,6 +49,12 @@ function* fnSaveNote({payload}) {
   yield put(updateItemList(noteSaved));
 }
 
+function* fnPinNote({payload}) {
+    console.log('fnPinNote:', payload);
+    yield call([noteService, 'fnPinNote'], payload.noteID, payload.action);
+    yield put(updateItemNotePin(payload));
+}
+
 function* fnLoadListNote({payload}) {
   try {
     console.log('fnLoadListNote:', payload)
@@ -56,13 +65,27 @@ function* fnLoadListNote({payload}) {
   }
 }
 
+function* fnLoadListNotePinned() {
+    try {
+        console.log('fnLoadListNotePinned:')
+        const res = yield noteService.fnLoadListNotePinned();
+        console.log('fnLoadListNotePinned:save', res)
+        if (res.data.notesPinned) {
+            yield put(saveNotePinned(res.data.notesPinned.body.hits.hits));
+        }
+    } catch (error) {
+        yield put(getDataFail(error));
+    }
+}
+
 function* fnInitDetailnote({payload}) {
-  let userAuth = yield fnLoadDefineIdentity()
-  console.log('fnInitDetailnote:', payload, userAuth);
-  if (userAuth) {
-    yield fnLoadListNote({payload: userAuth._source.userGeneId});
-    yield fnLoadNoteById({payload: {noteID: payload.noteID}})
-  }
+    let userAuth = yield fnLoadDefineIdentity();
+    yield fnLoadListNotePinned();
+    console.log('fnInitDetailnote:', payload, userAuth);
+    if (userAuth) {
+        yield fnLoadListNote({payload: userAuth._source.userGeneId});
+        yield fnLoadNoteById({payload: {noteID: payload.noteID}})
+    }
 }
 
 function* fnLoadDefineIdentity() {
@@ -217,5 +240,6 @@ export default function* rootSaga(context) {
     takeLatest(setSearch().type, fnSearch),
     takeLatest(unsetSearch().type, fnUnSearch),
     takeLatest(deleteNote().type, fnDeleteNote),
+    takeLatest(pinNote().type, fnPinNote),
   ])
 }

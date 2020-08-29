@@ -7,16 +7,35 @@ import {UPDATE_LIST_NOTE,
     UNSET_SEARCH,
     REMOVE_FROM_LIST,
     SAVE_USER_AUTH,
+    SAVE_NOTE_PINNED,
+    UPDATE_ITEM_NOTE_PIN
 } from '../actions/noteAction';
 import { findIndex } from 'lodash';
 import update from 'immutability-helper';
-import {EditorState} from 'draft-js';
 
 const noteReducer = (state =
-  {value: 0, notes: [], isSearch: true, textSearch: '', noteActive: {},
+  {value: 0, notes: [], notesPinned: [], isSearch: true, textSearch: '', noteActive: {},
     shouldSave: false, editorState: '', userAuth: null}, action) => {
 
   switch (action.type) {
+    case UPDATE_ITEM_NOTE_PIN:
+      if (action.payload.action) {
+        let notePin = _.find(state.notes, (o) => {
+          return o._id == action.payload.noteID;
+        });
+        let notesPinned = update(state.notesPinned, {$push: [notePin]})
+        return {...state, notesPinned: notesPinned};  
+      } else {
+        let notesPinned = _.filter(state.notesPinned, (o) => {
+          return o._id != action.payload.noteID;
+        });
+        return {...state, notesPinned: notesPinned};
+      }
+      break;
+    case SAVE_NOTE_PINNED:
+      console.log('noteReducer:SAVE_NOTE_PINNED:', action.payload);
+      return {...state, notesPinned: action.payload};
+      break;
     case SAVE_USER_AUTH:
       console.log('noteReducer:SAVE_USER_AUTH:', action.payload);
       return {...state, userAuth: action.payload};

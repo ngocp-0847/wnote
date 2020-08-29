@@ -16,7 +16,8 @@ import {
   unsetSearch,
   deleteNote,
   loadDefineIdentity,
-  initDetailnote
+  initDetailnote,
+  pinNote
 } from '../../redux/actions/noteAction';
 
 import classNames from 'classnames';
@@ -197,16 +198,57 @@ function WID(props) {
     let deleteNote = (e) => {
         props.deleteNote(props.noteActive._id);
     };
-
+    
     let logout = (e) => {
         router.push('/api/auth/logout')
     }
+
+    const [isPinned, setIsPinned] = useState(false);
+    let pinNote = (e) => {
+        props.pinNote({noteID: props.noteActive._id, action: !isPinned});
+    };
+
+    useEffect(() => {
+        if (props.userAuth && props.noteActive) {
+            let notePinned = _.find(props.notesPinned, (o) => {
+                return o._id == props.noteActive._id;
+            });
+            setIsPinned(notePinned !== undefined);
+        }
+    }, [props.notesPinned, props.noteActive]);
+
+    console.log('isPinned', isPinned);
 
     const styleNotImage = {maxWidth: '100%'};
     const styleHasImage = {maxWidth: '122px'};
 
     return (
         <main>
+            <div id="stick-note">
+                <div id="inner-stick">
+                    <p id="header-ln">pinned</p>
+                        <div className="list-note">
+                            <ul className="ul-note">
+                            {
+                                props.notesPinned && props.notesPinned.map((note, i) => {
+
+                                let styleText = styleNotImage;
+                                if (note._source && note._source.shortContent
+                                    && note._source.shortContent.shortImage) {
+                                    styleText = styleHasImage;
+                                }
+                                return (
+                                    <li key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
+                                        onClick={activeNoteSidebar.bind(this, note)}>
+                                        <span style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText.substring(0, 18) : ''}</span>
+                                    </li>
+                                )
+                                })
+                            }
+                            </ul>  
+                        </div>
+                </div>
+            </div> 
             <div className="sidebar-note">
                 <div className="inner-list-note">
                     <p id="header-ln">notes</p>
@@ -223,14 +265,14 @@ function WID(props) {
                                 return (
                                     <div key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
                                         onClick={activeNoteSidebar.bind(this, note)}>
-                                    <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
-                                    {
-                                        (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
-                                        (
-                                        <div className="image-s">
-                                            <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
-                                        </div>
-                                        )
+                                        <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
+                                        {
+                                            (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
+                                            (
+                                            <div className="image-s">
+                                                <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
+                                            </div>
+                                            )
                                     }
                                     </div>
                                 )
@@ -242,11 +284,16 @@ function WID(props) {
             </div>
             <div className="main-note">
                 <div id="header-editor">
-                    <button id="btn-n-note" onClick={onNewNote}>New</button>
+                    <div id="con-r-n">
+                        <button id="btn-n-note" onClick={onNewNote}>New</button>
+                    </div>
                     <div className="wrap-search">
                         <input name="input-search" className="input-search" placeholder="Search" onChange={search} />
                     </div>
                     <div id="con-r">
+                        <button id="btn-p-no" onClick={pinNote}>
+                            {isPinned ? 'Unpin' : 'Pin'}
+                        </button>
                         <button id="btn-d-no" onClick={deleteNote}>Delete</button>
                     </div>
                     <div className="auth">
@@ -277,6 +324,7 @@ const mapStateToProps = state => {
     shouldSave: state.note.shouldSave,
     editorState: state.note.editorState,
     userAuth: state.note.userAuth,
+    notesPinned: state.note.notesPinned,
   };
 };
 
@@ -293,6 +341,7 @@ const mapDispatchToProps = {
     deleteNote: deleteNote,
     loadDefineIdentity: loadDefineIdentity,
     initDetailnote: initDetailnote,
+    pinNote: pinNote,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));

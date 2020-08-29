@@ -6,15 +6,30 @@
   h4{
     margin: 2px;
   }
-  #btn-n-note{
-    align-self: center;
-    border-radius: 3px;
-    margin: 0px 5px;
-    cursor: pointer;
-    padding: 6px 12px;
-    background-color: #79c2de;
-    color: white;
-    font-weight: bold;
+  #con-r-n{
+    #btn-n-note{
+      align-self: center;
+      border-radius: 3px;
+      margin: 0px 5px;
+      cursor: pointer;
+      padding: 5px 12px;
+      background-color: #89b3de;
+      color: white;
+      font-weight: bold;
+    }
+  }
+  #con-r{
+    margin-left: 12px;
+    #btn-p-no{
+      align-self: center;
+      border-radius: 3px;
+      margin: 0px 5px;
+      padding: 5px 12px;
+      background-color: #008a00;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+    }
   }
   .auth{
     display: flex;
@@ -30,13 +45,19 @@
       padding: 5px;
     }
     #wr-ar-lo{
-      color: white;
-      background-color: #9e9191;
-      font-size: 13px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      height: 27px;
-      cursor: pointer;
+      #btn-logout {
+        align-self: center;
+        border-radius: 3px;
+        margin: 0px 5px;
+        padding: 5px 12px 6px 12px;
+        background-color: #d6c3c3;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+        font-size: 13px;
+        display: block;
+        border: 1px solid black;
+      }
     }
     #btn-login{
       align-self: center;
@@ -86,6 +107,32 @@ main {
   align-content: stretch;
   height: 100%;
   width: 100%;
+  #stick-note{
+    flex: 0 0 auto;
+    width: 200px;
+    #inner-stick{
+      #header-ln{
+        background-color: #fffcf5;
+        margin-top: 0px;
+        margin-bottom: 0px;
+        padding: 10px;
+        border-bottom: 1px solid #f2d3a2;
+        border-right: 1px solid #f2d3a2;
+      }
+
+      .list-note{
+        .ul-note{
+          .active{
+            font-weight: bold;
+          }
+          li.note-c{
+            cursor: pointer;
+            font-size: 13px;
+          }
+        }
+      }
+    }
+  }
 }
 
 main .sidebar-note {
