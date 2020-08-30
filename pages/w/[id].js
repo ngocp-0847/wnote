@@ -143,6 +143,7 @@ function WID(props) {
             'createdAt': new Date().getTime(),
             'updatedAt': new Date().getTime(),
         }
+        console.log('startSaveNote:', props.shouldSave);
         props.startSaveNote([props.router.query.id, body])
     };
 
@@ -153,7 +154,8 @@ function WID(props) {
     };
 
     useEffect(() => {
-        if (props.shouldSave) {
+        console.log('shouldSave:', props.shouldSave);
+        if (props.shouldSave.length == 0) {
             debouncePush();
         }
     }, [props.editorState]);

@@ -15,7 +15,7 @@ import update from 'immutability-helper';
 
 const noteReducer = (state =
   {value: 0, notes: [], notesPinned: [], isSearch: true, textSearch: '', noteActive: {},
-    shouldSave: false, editorState: '', userAuth: null}, action) => {
+    shouldSave: [1], editorState: '', userAuth: null}, action) => {
 
   switch (action.type) {
     case UPDATE_ITEM_NOTE_PIN:
@@ -83,7 +83,16 @@ const noteReducer = (state =
     case UPDATE_EDITOR_STATE:
       return {...state, editorState: action.payload};
     case CHANGE_STATUS_FOR_SAVE:
-        return {...state, shouldSave: action.payload};
+      console.log('reducer:saveStatus:', action.payload);
+      if (!action.payload) {
+        let shouldSave = update(state.shouldSave, {$push: [1]})
+        return {...state, shouldSave: shouldSave};
+      } else {
+        if (state.shouldSave.length > 0) {
+          let shouldSave = update(state.shouldSave, {$splice: [[0, 1]]});
+          return {...state, shouldSave: shouldSave};
+        }
+      }
     default:
         return {...state};
   }

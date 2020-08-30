@@ -86,6 +86,7 @@ function* fnInitDetailnote({payload}) {
         yield fnLoadListNote({payload: userAuth._source.userGeneId});
         yield fnLoadNoteById({payload: {noteID: payload.noteID}})
     }
+    yield put(changeStatusForSave(true));
 }
 
 function* fnLoadDefineIdentity() {
@@ -111,7 +112,7 @@ function* fnLoadNoteLastest(action) {
         return false;
     }
     let noteID = uuidv4();
-    yield put(changeStatusForSave(true));
+    yield put(changeStatusForSave(false));
     const data = yield noteService.fnLoadNoteLastest(userAuth.userGeneId)
     console.log('fnLoadNoteLastest:', data)
     if (data.code == 200) {
@@ -121,14 +122,13 @@ function* fnLoadNoteLastest(action) {
             noteID = hits[0]._id
             // yield put(fillNoteActive(hits[0]));
             yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-            yield put(changeStatusForSave(true));
         } else {
             yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-            yield put(changeStatusForSave(true));
         }
     } else {
         yield fnNewEmptyNote();
     }
+    yield put(changeStatusForSave(true));
 }
 
 function* fnNewEmptyNote() {
@@ -156,6 +156,7 @@ function* fnNewEmptyNote() {
 
 function* fnLoadNoteById({ payload }) {
   console.log('fnLoadNoteById:', payload)
+  yield put(changeStatusForSave(false)); //cancel save editor.
   const data = yield noteService.fnLoadNoteByID(payload.noteID);
 
   if (data.total > 0) {
@@ -178,6 +179,7 @@ function* fnActiveNoteSidebar({ payload }) {
   yield put(updateEditorState(''));
   yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
   yield fnLoadNoteById({payload: {noteID: payload._id}})
+  yield put(changeStatusForSave(true));
 }
 
 function* fnSearch({ payload }) {
