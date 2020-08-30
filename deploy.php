@@ -3,7 +3,7 @@ namespace Deployer;
 require 'recipe/common.php';
 
 // Project name
-set('application', 'w-note');
+set('application', 'wnote');
 
 // Project repository
 set('repository', 'git@github.com:ngocp-0847/wnote.git');
@@ -43,7 +43,11 @@ task('pm2:init', function () {
 });
 
 task('pm2:restart', function () {
-    run('cd {{current_path}} && pm2 restart nextjs');
+    run('cd {{current_path}} && pm2 reload nextjs');
+});
+
+task('pm2:deploy', function () {
+    run('cd /var/www/html/{{application}} && ./deploy.sh');
 });
 
 task('nginx:restart', function () {
@@ -51,21 +55,26 @@ task('nginx:restart', function () {
 });
 
 desc('Deploy your project');
+
 task('deploy', [
-    'deploy:info',
-    'deploy:prepare',
-    'deploy:lock',
-    'deploy:release',
-    'deploy:update_code',
-    'deploy:shared',
-    'npm:install',
-    'npm:run:build',
-    'deploy:writable',
-    'deploy:symlink',
-    'deploy:unlock',
-    'pm2:restart',
-    'nginx:restart',
-    'cleanup',
+    'pm2:deploy',
 ]);
+
+// task('deploy', [
+//     'deploy:info',
+//     'deploy:prepare',
+//     'deploy:lock',
+//     'deploy:release',
+//     'deploy:update_code',
+//     'deploy:shared',
+//     'npm:install',
+//     'npm:run:build',
+//     'deploy:writable',
+//     'deploy:symlink',
+//     'deploy:unlock',
+//     'pm2:restart',
+//     'nginx:restart',
+//     'cleanup',
+// ]);
 
 desc('Deployed successfully!');

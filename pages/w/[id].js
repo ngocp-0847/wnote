@@ -308,7 +308,7 @@ function WID(props) {
                 </div>
                 <NoSSR>
                     <div className="editor">
-                        {!props.shouldSave && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
+                        {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
                         <FormHtmlEditor value={props.editorState}
                             ref={reactQuillRef}
                             onChange={onChangeEditor} />
