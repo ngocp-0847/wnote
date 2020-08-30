@@ -107,8 +107,8 @@ function* fnLoadDefineIdentity() {
 function* fnLoadNoteLastest(action) {
     const userAuth = yield fnLoadDefineIdentity();
     if (userAuth == false) {
-      yield call(Router.push, `/w/login`);
-      return false;
+        yield call(Router.push, `/w/login`);
+        return false;
     }
     let noteID = uuidv4();
     yield put(changeStatusForSave(true));
@@ -118,16 +118,16 @@ function* fnLoadNoteLastest(action) {
         let rawdata = data.data;
         var hits = rawdata.noteLatest.body.hits.hits;
         if (hits.length != 0) {
-        noteID = hits[0]._id
-        yield put(fillNoteActive(hits[0]));
-        yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-        yield put(changeStatusForSave(true));
+            noteID = hits[0]._id
+            // yield put(fillNoteActive(hits[0]));
+            yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+            yield put(changeStatusForSave(true));
         } else {
-        yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-        yield put(changeStatusForSave(true));
+            yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+            yield put(changeStatusForSave(true));
         }
     } else {
-      yield fnNewEmptyNote();
+        yield fnNewEmptyNote();
     }
 }
 

@@ -35,7 +35,7 @@ task('npm:install', function () {
 });
 
 task('npm:run:build', function () {
-    run('cd {{release_path}} && yarn build');
+    run('cd {{current_path}} && yarn build');
 });
 
 task('pm2:init', function () {
@@ -43,7 +43,7 @@ task('pm2:init', function () {
 });
 
 task('pm2:restart', function () {
-    run('cd {{current_path}} && pm2 restart nextjs');
+    run('cd {{current_path}} && pm2 restart nextjs && sudo service nginx restart');
 });
 
 desc('Deploy your project');
@@ -55,10 +55,10 @@ task('deploy', [
     'deploy:update_code',
     'deploy:shared',
     'npm:install',
-    'npm:run:build',
     'deploy:writable',
     'deploy:symlink',
     'deploy:unlock',
+    'npm:run:build',
     'pm2:restart',
     'cleanup',
 ]);
