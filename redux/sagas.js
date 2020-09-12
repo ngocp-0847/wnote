@@ -132,14 +132,18 @@ function* fnLoadNoteLastest(action) {
 }
 
 function* fnNewEmptyNote() {
-  var noteID = uuidv4();
-  console.log('fnNewEmptyNote:', noteID)
-  yield put(changeStatusForSave(false)); //cancel save editor.
-  yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-  var editorState = '';
+    var noteID = uuidv4();
+    console.log('fnNewEmptyNote:', noteID)
+    yield put(changeStatusForSave(false)); //cancel save editor.
+    yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+    var editorState = [{
+        type: 'paragraph',
+        children: [{ text: '' }],
+    }];
+
   yield put(updateEditorState(editorState));
   var body = {
-    'content': '',
+    'content': JSON.stringify(editorState),
     'rawTextSearch': '',
     'shortContent': {shortText: null, shortImage: null},
     'userID': localStorage.getItem('userID'),
@@ -164,7 +168,7 @@ function* fnLoadNoteById({ payload }) {
     try {
       // console.log('fnLoadNoteById:beforeClearContent:');
       console.log('fnLoadNoteById:beforeSetContent:');
-      yield put(updateEditorState(data.hits[0]._source.content));
+      yield put(updateEditorState(JSON.parse(data.hits[0]._source.content)));
     } catch(e) {
       console.log('fnLoadNoteById:catch:', e);
       yield put(updateEditorState(''));

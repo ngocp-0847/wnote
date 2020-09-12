@@ -13,9 +13,23 @@ import {UPDATE_LIST_NOTE,
 import { findIndex } from 'lodash';
 import update from 'immutability-helper';
 
+const deserialize = string => {
+  // Return a value array of children derived by splitting the string.
+  return string.split('\n').map(line => {
+    return {
+      children: [{ text: line }],
+    }
+  })
+}
+
 const noteReducer = (state =
   {value: 0, notes: [], notesPinned: [], isSearch: true, textSearch: '', noteActive: {},
-    shouldSave: [1], editorState: '', userAuth: null}, action) => {
+    shouldSave: [1], editorState: [
+      {
+        type: 'paragraph',
+        children: [{ text: 'A line of text in a paragraph.' }],
+      },
+    ], userAuth: null}, action) => {
 
   switch (action.type) {
     case UPDATE_ITEM_NOTE_PIN:

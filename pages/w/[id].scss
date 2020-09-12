@@ -209,41 +209,12 @@ main .main-note {
         }
       }
     }
-    .quill {
+    .slate-editor{
+      width: 100%;
       height: 100%;
-      display: flex;
-      flex-direction: column;
-      .ql-container{
-        height: 100%;
-        overflow-y: scroll;
-        font-size: 16px;
-        .ql-editor{
-          img{
-            max-width: 100%;
-            height: auto;
-          }
-          pre.ql-syntax{
-            background-color: #fbfbfb;
-            color: black;
-            border: 1px solid #C0C0C0;
-          }
-        }
-      }
+      display: block;
     }
   }
-}
-
-.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before {
-  content: 'Normal';
-  font-size: 16px !important;
-}
-.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before {
-  content: 'Large';
-  font-size: 18px !important;
-}
-.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before {
-  content: 'Huge';
-  font-size: 20px !important;
 }
 
 .area-login{
