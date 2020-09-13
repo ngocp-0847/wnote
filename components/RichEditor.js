@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback, Component } from 'react';
-import { Editor, createEditor, Node, Range, Point, Transforms } from 'slate';
+import { Text, Editor, createEditor, Node, Range, Point, Transforms } from 'slate';
 import {
   Slate,
   Editable,
@@ -17,7 +17,7 @@ import {
     MdFormatItalic,
     MdFormatListBulleted,
     MdFormatListNumbered, MdFormatQuote, MdFormatUnderlined, MdImage, MdList, 
-    MdLooksOne, MdLooksTwo, MdOndemandVideo
+    MdLooksOne, MdLooksTwo
 } from 'react-icons/md';
 
 const HOTKEYS = {
@@ -26,6 +26,7 @@ const HOTKEYS = {
     'mod+u': 'underline',
     'mod+`': 'code',
 };
+
 
 const LIST_TYPES = ['numbered-list', 'bulleted-list'];
 
@@ -50,6 +51,9 @@ const ELEMENT_TAGS = {
     TR: () => ({ type: 'table-row' }),
     TD: () => ({ type: 'table-cell' }),
     TH: () => ({ type: 'table-cell-header' }),
+    HEADER: () => ({ type: 'header' }),
+    SECTION: () => ({ type: 'section' }),
+    DIV: () => ({ type: 'div' }),
 }
 
     // COMPAT: `B` is omitted here because Google Docs uses `<b>` in weird ways.
@@ -74,7 +78,7 @@ export const deserialize = el => {
 
     const { nodeName } = el
     let parent = el
-    console.log('deserialize:', nodeName)
+    // console.log('deserialize:', nodeName)
     if (
         nodeName === 'PRE' &&
         el.childNodes[0] &&
@@ -103,7 +107,7 @@ export const deserialize = el => {
     return children
 }
 
-export default function RichEditor(props, ref) {
+export default function RichEditor(props) {
     const renderElement = useCallback(props => <Element {...props} />, [])
     const renderLeaf = useCallback(props => <Leaf {...props} />, [])
     const editor = useMemo(
@@ -111,10 +115,13 @@ export default function RichEditor(props, ref) {
         []
     )
 
+    useEffect(()=> {
+        props.editorRef(editor)
+   , []});
+   
     return (
         <Slate editor={editor} 
-            value={props.value} 
-            ref={ref}
+            value={props.value}
             onChange={newValue => props.onChange(newValue)}>
             <Toolbar>
                 <MarkButton format="bold" icon="format_bold" />
@@ -128,10 +135,10 @@ export default function RichEditor(props, ref) {
                 <BlockButton format="bulleted-list" icon="format_list_bulleted" />
             </Toolbar>
             <Editable 
+              
                 className="slate-editor"
                 renderElement={renderElement}
                 renderLeaf={renderLeaf}
-
                 spellCheck
                 autoFocus
                 onKeyDown={event => {
@@ -241,7 +248,7 @@ const withHtml = editor => {
   
   const Element = props => {
     const { attributes, children, element } = props
-    console.log('Element:', element.type, children);
+    // console.log('Element:', element.type, children);
     switch (element.type) {
         case 'thead':
             return (
@@ -261,15 +268,16 @@ const withHtml = editor => {
             return <td {...attributes}>{children}</td>
         case 'table-cell-header':
             return <th {...attributes}>{children}</th>
-            
+        case 'header':
+            return <header {...attributes}>{children}</header>
+        case 'section':
+            return <section {...attributes}>{children}</section>
+        case 'div':
+            return <div {...attributes}>{children}</div>
         case 'block-quote':
             return <blockquote {...attributes}>{children}</blockquote>
         case 'code':
-            return (
-            <pre>
-                <code {...attributes}>{children}</code>
-            </pre>
-            )
+            return <pre {...attributes}>{children}</pre>
         case 'bulleted-list':
             return <ul {...attributes}>{children}</ul>
         case 'heading-one':
@@ -324,9 +332,9 @@ const withHtml = editor => {
     if (leaf.bold) {
       children = <strong>{children}</strong>
     }
-  
+
     if (leaf.code) {
-      children = <code>{children}</code>
+        children = <code>{children}</code>;
     }
   
     if (leaf.italic) {
@@ -340,7 +348,7 @@ const withHtml = editor => {
     if (leaf.strikethrough) {
       children = <del>{children}</del>
     }
-  
+    
     return <span {...attributes}>{children}</span>
 }
 

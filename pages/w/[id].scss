@@ -194,6 +194,8 @@ main .main-note {
   .editor{
     flex: 1;
     height: calc(100% - 93px);
+    display: flex;
+    flex-direction: column;
     .wrap-editor{
       flex: 1;
       height:  100%;
@@ -212,7 +214,8 @@ main .main-note {
     .slate-editor{
       width: 100%;
       height: 100%;
-      display: block;
+      flex: 1;
+      overflow-y: scroll;
     }
   }
 }

@@ -43,12 +43,12 @@ import Loader from 'react-loader-spinner';
 function WID(props) {
     const [eventText, setEventText] = useState('');
     const initFlag = useRef(true);
-    const editorRef = React.createRef();
+    const editorRef = useRef(null);
 
     let router = useRouter();
 
     let onNewNote = () => {
-        // Transforms.deselect(editor);
+        Transforms.deselect(editorRef.current);
         props.newEmptyNote();
     };
 
@@ -87,6 +87,10 @@ function WID(props) {
     }, []);
 
     useEffect(() => {
+        if (editorRef.current) {
+            console.log('router:change:', editorRef.current)
+            // editorRef.current.moveTo(0);
+        }
         console.log('query:change:');
     }, [router.query.id]);
 
@@ -224,15 +228,15 @@ function WID(props) {
                         </div>
                     </div>
                 </div>
-                <NoSSR>
-                    <div className="editor">
-                        {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
-                        <RichEditor 
-                            value={props.editorState} 
-                            ref={editorRef}
-                            onChange={newValue => onChangeEditor(newValue)} />
-                    </div>
-                </NoSSR>
+            
+                <div className="editor">
+                    {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
+                    <RichEditor 
+                        value={props.editorState} 
+                        editorRef={(e) => editorRef.current = e}
+                        onChange={newValue => onChangeEditor(newValue)} />
+                </div>
+
             </div>
         </main>
     )

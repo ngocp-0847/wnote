@@ -26,8 +26,7 @@ const noteReducer = (state =
   {value: 0, notes: [], notesPinned: [], isSearch: true, textSearch: '', noteActive: {},
     shouldSave: [1], editorState: [
       {
-        type: 'paragraph',
-        children: [{ text: 'A line of text in a paragraph.' }],
+        children: [{ text: '' }],
       },
     ], userAuth: null}, action) => {
 
