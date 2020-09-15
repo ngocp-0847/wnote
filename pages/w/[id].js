@@ -1,11 +1,11 @@
 import Layout from '../../components/layout.js';
 import React, { useEffect, useState, useRef, useMemo, Component } from 'react';
-import NoSSR from 'react-no-ssr';
 import { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
 import RichEditor from '../../components/RichEditor';
 import { Transforms, Node } from 'slate';
-import {useEditor, useSlate} from 'slate-react';
+import Button from '@material-ui/core/Button';
+import Input from '@material-ui/core/Input';
 
 const serialize = value => {
     return (
@@ -209,22 +209,24 @@ function WID(props) {
             <div className="main-note">
                 <div id="header-editor">
                     <div id="con-r-n">
-                        <button id="btn-n-note" onClick={onNewNote}>New</button>
-                    </div>
-                    <div className="wrap-search">
-                        <input name="input-search" className="input-search" placeholder="Search" onChange={search} />
-                    </div>
-                    <div id="con-r">
-                        <button id="btn-p-no" onClick={pinNote}>
+                        <Button id="btn-n-note" color="primary" onClick={onNewNote} size="small">
+                            New
+                        </Button>
+                        <Input id="input-search" placeholder="Search"  size="small" onChange={search} />
+                        <Button color="primary" onClick={pinNote} size="small">
                             {isPinned ? 'Unpin' : 'Pin'}
-                        </button>
-                        <button id="btn-d-no" onClick={deleteNote}>Delete</button>
+                        </Button>
+                        <Button id="btn-delete" color="secondary" onClick={deleteNote} size="small">
+                            Delete
+                        </Button>
                     </div>
                     <div className="auth">
                         <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img"/></span>
                         <span id="name-auth" >{props.userAuth && props.userAuth._source.username}</span>
                         <div id="wr-ar-lo" >
-                            <a onClick={logout} id="btn-logout">Logout</a>
+                            <Button id="btn-logout" color="secondary" onClick={logout} size="small">
+                                Logout
+                            </Button>
                         </div>
                     </div>
                 </div>

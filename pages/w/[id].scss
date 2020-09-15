@@ -6,29 +6,13 @@
   h4{
     margin: 2px;
   }
-  #con-r-n{
-    #btn-n-note{
-      align-self: center;
-      border-radius: 3px;
-      margin: 0px 5px;
-      cursor: pointer;
-      padding: 5px 12px;
-      background-color: #89b3de;
-      color: white;
-      font-weight: bold;
-    }
-  }
+
   #con-r{
-    margin-left: 12px;
+    margin: 0px 12px;
     #btn-p-no{
-      align-self: center;
-      border-radius: 3px;
-      margin: 0px 5px;
-      padding: 5px 12px;
-      background-color: #008a00;
-      font-weight: bold;
-      color: white;
-      cursor: pointer;
+    }
+    #btn-delete{
+      margin-left: 10px;
     }
   }
   .auth{
@@ -46,17 +30,6 @@
     }
     #wr-ar-lo{
       #btn-logout {
-        align-self: center;
-        border-radius: 3px;
-        margin: 0px 5px;
-        padding: 5px 12px 6px 12px;
-        background-color: #d6c3c3;
-        font-weight: bold;
-        color: white;
-        cursor: pointer;
-        font-size: 13px;
-        display: block;
-        border: 1px solid black;
       }
     }
     #btn-login{
@@ -82,14 +55,6 @@
       color: white;
       cursor: pointer;
     }
-  }
-}
-
-.wrap-search{
-  margin-left: 15px;
-  .input-search{
-    width: 360px;
-    height: 32px;
   }
 }
 
@@ -216,6 +181,12 @@ main .main-note {
       height: 100%;
       flex: 1;
       overflow-y: scroll;
+      code{
+        font-size: 15px;
+      }
+      table, tr, td, th {
+        border: 1px solid #C0C0C0;
+      }
     }
   }
 }
