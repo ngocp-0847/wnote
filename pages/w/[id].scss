@@ -1,8 +1,8 @@
 #header-editor{
-  padding: 13px;
-  // margin: 10px;
-  display: flex;
-  flex-direction: row;
+  // padding: 13px;
+  // // margin: 10px;
+  // display: flex;
+  // flex-direction: row;
   h4{
     margin: 2px;
   }
@@ -181,6 +181,10 @@ main .main-note {
       height: 100%;
       flex: 1;
       overflow-y: scroll;
+      [data-slate-node='element'] {
+        margin-top: 5px;
+        margin-bottom: 5px;
+      }
       code{
         font-size: 15px;
       }
@@ -213,4 +217,8 @@ main .main-note {
     border-radius: 4px;
     cursor: pointer;
   }  
+}
+
+.invisible {
+  visibility: hidden;
 }

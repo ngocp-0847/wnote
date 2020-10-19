@@ -1,5 +1,5 @@
 import Layout from '../../components/layout.js';
-import React, { useEffect, useState, useRef, useMemo, Component } from 'react';
+import React, { useEffect, useState, useRef} from 'react';
 import { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
 import RichEditor from '../../components/RichEditor';
@@ -89,7 +89,6 @@ function WID(props) {
     useEffect(() => {
         if (editorRef.current) {
             console.log('router:change:', editorRef.current)
-            // editorRef.current.moveTo(0);
         }
         console.log('query:change:');
     }, [router.query.id]);
@@ -207,8 +206,8 @@ function WID(props) {
                 </div>
             </div>
             <div className="main-note">
-                <div id="header-editor">
-                    <div id="con-r-n">
+                <div id="header-editor" className="flex pl-4 pt-1 pb-1 mb-2 bg-gray-200">
+                    <div id="con-r-n items-start flex-grow">
                         <Button id="btn-n-note" color="primary" onClick={onNewNote} size="small">
                             New
                         </Button>
@@ -220,10 +219,12 @@ function WID(props) {
                             Delete
                         </Button>
                     </div>
-                    <div className="auth">
-                        <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img"/></span>
-                        <span id="name-auth" >{props.userAuth && props.userAuth._source.username}</span>
-                        <div id="wr-ar-lo" >
+                    <div className="flex flex-1 rounded-lg items-end justify-end">
+                        <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img w-6"/></span>
+                        <div className="m-2">
+                            <span id="name-auth" >{props.userAuth && props.userAuth._source.username}</span>
+                        </div>
+                        <div id="wr-ar-lo" className="items-end">
                             <Button id="btn-logout" color="secondary" onClick={logout} size="small">
                                 Logout
                             </Button>

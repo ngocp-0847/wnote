@@ -7,6 +7,7 @@ import {Provider} from 'react-redux';
 import React from 'react';
 import withRedux from "next-redux-wrapper";
 import store from '../redux/store';
+import '../styles/tailwind.css';
 
 class MyApp extends App {
 

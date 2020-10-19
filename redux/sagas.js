@@ -1,4 +1,4 @@
-import {put, call, takeLatest, all, select, take} from 'redux-saga/effects';
+import {put, call, takeLatest, takeEvery, all, select, take} from 'redux-saga/effects';
 import {
   startSaveNote,
   updateItemList,
@@ -192,13 +192,16 @@ function* fnSearch({ payload }) {
     userID: localStorage.getItem('userID'),
     text: payload,
   }
+  yield put(changeStatusForSave(false));
   const results = yield call([noteService, 'fnSearch'], body);
+  yield put(changeStatusForSave(true));
+
   console.log('fnSearch:call', results)
   yield put(updateListNote(results.data.hits));
   let noteLastest = !isEmpty(results.data.hits) ? results.data.hits[0] : null;
   console.log('fnSearch:noteLastest:', noteLastest);
   if (noteLastest) {
-    yield* fnActiveNoteSidebar({payload: {_id: noteLastest._id}});
+    yield fnActiveNoteSidebar({payload: {_id: noteLastest._id}});
   }
 }
 
@@ -243,7 +246,7 @@ export default function* rootSaga(context) {
     takeLatest(loadNoteById().type, fnLoadNoteById),
     takeLatest(newEmptyNote().type, fnNewEmptyNote),
     takeLatest(activeNoteSidebar().type, fnActiveNoteSidebar),
-    takeLatest(setSearch().type, fnSearch),
+    takeEvery(setSearch().type, fnSearch),
     takeLatest(unsetSearch().type, fnUnSearch),
     takeLatest(deleteNote().type, fnDeleteNote),
     takeLatest(pinNote().type, fnPinNote),

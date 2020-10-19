@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback, Component } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Text, Editor, createEditor, Node, Range, Point, Transforms } from 'slate';
 import {
   Slate,
@@ -11,13 +11,17 @@ import { withHistory } from 'slate-history';
 import { cx, css } from 'emotion';
 import { jsx } from 'slate-hyperscript';
 import isHotkey from 'is-hotkey';
+
+import imageExtensions from 'image-extensions';
+import isUrl from 'is-url';
+
 import {
     MdCode,
     MdFormatBold,
     MdFormatItalic,
     MdFormatListBulleted,
     MdFormatListNumbered, MdFormatQuote, MdFormatUnderlined, MdImage, MdList, 
-    MdLooksOne, MdLooksTwo
+    MdLooksOne, MdLooksTwo, MdLooks3
 } from 'react-icons/md';
 
 const HOTKEYS = {
@@ -53,7 +57,6 @@ const ELEMENT_TAGS = {
     TH: () => ({ type: 'table-cell-header' }),
     HEADER: () => ({ type: 'header' }),
     SECTION: () => ({ type: 'section' }),
-    DIV: () => ({ type: 'div' }),
 }
 
     // COMPAT: `B` is omitted here because Google Docs uses `<b>` in weird ways.
@@ -67,7 +70,8 @@ const TEXT_TAGS = {
     U: () => ({ underline: true }),
 }
 
-export const deserialize = el => {
+export const deserialize = (el, mAttrs = {}) => {
+    console.log('deserialize:', el, el.nodeType, el.nodeName)
     if (el.nodeType === 3) {
         return el.textContent
     } else if (el.nodeType !== 1) {
@@ -78,29 +82,42 @@ export const deserialize = el => {
 
     const { nodeName } = el
     let parent = el
-    // console.log('deserialize:', nodeName)
-    if (
-        nodeName === 'PRE' &&
-        el.childNodes[0] &&
-        el.childNodes[0].nodeName === 'CODE'
-    ) {
-        parent = el.childNodes[0]
+
+    if (el.childNodes[0]) {
+        console.log('deserialize:sub', el.childNodes[0], el.childNodes[0].nodeName)
     }
-    const children = Array.from(parent.childNodes)
-        .map(deserialize)
-        .flat()
+    let children = [];
+    if (nodeName === 'PRE') {
+        if (el.childNodes[0] && el.childNodes[0].nodeName === 'CODE') {
+            parent = el.childNodes[0]
+        }
+        console.log('deserialize:pre:', parent, parent.childNodes);
+        children = Array.from(parent.childNodes)
+            .map((e) => {
+                return {
+                    text: e.textContent,
+                    code: true,
+                }
+            })
+    } else {
+        children = Array.from(parent.childNodes)
+            .map(deserialize)
+            .flat()
+    }
+
 
     if (el.nodeName === 'BODY') {
-        return jsx('fragment', {}, children)
+        return jsx('fragment', {}, children);
     }
 
     if (ELEMENT_TAGS[nodeName]) {
-        const attrs = ELEMENT_TAGS[nodeName](el)
+        const attrs = ELEMENT_TAGS[nodeName](el); 
+        
         return jsx('element', attrs, children)
     }
 
     if (TEXT_TAGS[nodeName]) {
-        const attrs = TEXT_TAGS[nodeName](el)
+        const attrs = TEXT_TAGS[nodeName](el); 
         return children.map(child => jsx('text', attrs, child))
     }
 
@@ -111,14 +128,20 @@ export default function RichEditor(props) {
     const renderElement = useCallback(props => <Element {...props} />, [])
     const renderLeaf = useCallback(props => <Leaf {...props} />, [])
     const editor = useMemo(
-        () => withTables(withHtml(withReact(withHistory(createEditor())))),
+        () => withImages(withTables(withHtml(withReact(withHistory(createEditor()))))),
         []
     )
+    
+    let fileUploadRef = useRef(null)
+    
+    let onChangeUpload = (e) => {
+        fnRemoteImage(editor, e.target.files)
+    }
 
     useEffect(()=> {
         props.editorRef(editor)
    , []});
-   
+
     return (
         <Slate editor={editor} 
             value={props.value}
@@ -130,12 +153,21 @@ export default function RichEditor(props) {
                 <MarkButton format="code" icon="code" />
                 <BlockButton format="heading-one" icon="heading-one" />
                 <BlockButton format="heading-two" icon="heading-two" />
+                <BlockButton format="heading-three" icon="heading-three" />
                 <BlockButton format="block-quote" icon="format_quote" />
                 <BlockButton format="numbered-list" icon="format_list_numbered" />
                 <BlockButton format="bulleted-list" icon="format_list_bulleted" />
+                <Button
+                    onMouseDown={event => {
+                        event.preventDefault()
+                        fileUploadRef.current.click()
+                    }}
+                >
+                    <MdImage size="24" />
+                </Button>
+                <input type="file" onChange={onChangeUpload} id="chooseFile" className="invisible" ref={fileUploadRef} />
             </Toolbar>
             <Editable 
-              
                 className="slate-editor"
                 renderElement={renderElement}
                 renderLeaf={renderLeaf}
@@ -144,9 +176,9 @@ export default function RichEditor(props) {
                 onKeyDown={event => {
                     for (const hotkey in HOTKEYS) {
                         if (isHotkey(hotkey, event)) {
-                        event.preventDefault()
-                        const mark = HOTKEYS[hotkey]
-                        toggleMark(editor, mark)
+                            event.preventDefault()
+                            const mark = HOTKEYS[hotkey]
+                            toggleMark(editor, mark)
                         }
                     }
                 }}
@@ -155,6 +187,65 @@ export default function RichEditor(props) {
         </Slate>
     )
 };
+
+const fnRemoteImage = (editor, files) => {
+    for (const file of files) {
+        const [mime] = file.type.split('/');
+        if (mime === 'image') {
+            const formData = new FormData();
+            formData.append("image", file);
+            fetch("/api/note/upload", {
+                method: "POST",
+                body: formData
+            }
+            )
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);
+                insertImage(editor, result.data.uri)
+            })
+            .catch(error => {
+                alert("Error:", error);
+            });
+        }
+    }
+}
+
+const withImages = editor => {
+    const { insertData, isVoid } = editor
+
+    editor.isVoid = element => {
+        return element.type === 'image' ? true : isVoid(element)
+    }
+
+    editor.insertData = data => {
+        const text = data.getData('text/plain')
+        const { files } = data
+        console.log('insertData:', files)
+        if (files && files.length > 0) {
+            fnRemoteImage(editor, files)
+        } else if (isImageUrl(text)) {
+            insertImage(editor, text)
+        } else {
+            insertData(data)
+        }
+    }
+
+    return editor
+}
+  
+const isImageUrl = url => {
+    if (!url) return false
+    if (!isUrl(url)) return false
+    const ext = new URL(url).pathname.split('.').pop()
+    return imageExtensions.includes(ext)
+}
+  
+const insertImage = (editor, url) => {
+    const text = { text: '' }
+    const image = { type: 'image', url, children: [text] }
+    Transforms.insertNodes(editor, image)
+}
 
 const withTables = editor => {
     const { deleteBackward, deleteForward, insertBreak } = editor
@@ -231,24 +322,23 @@ const withHtml = editor => {
     }
   
     editor.insertData = data => {
-      const html = data.getData('text/html')
-  
-      if (html) {
-        const parsed = new DOMParser().parseFromString(html, 'text/html')
-        const fragment = deserialize(parsed.body)
-        Transforms.insertFragment(editor, fragment)
-        return
-      }
-  
-      insertData(data)
+        const html = data.getData('text/html')
+    
+        if (html) {
+            const parsed = new DOMParser().parseFromString(html, 'text/html')
+            const fragment = deserialize(parsed.body)
+            Transforms.insertFragment(editor, fragment)
+            return
+        }
+    
+        insertData(data)
     }
   
     return editor
-  }
+}
   
   const Element = props => {
     const { attributes, children, element } = props
-    // console.log('Element:', element.type, children);
     switch (element.type) {
         case 'thead':
             return (
@@ -272,12 +362,14 @@ const withHtml = editor => {
             return <header {...attributes}>{children}</header>
         case 'section':
             return <section {...attributes}>{children}</section>
-        case 'div':
-            return <div {...attributes}>{children}</div>
         case 'block-quote':
             return <blockquote {...attributes}>{children}</blockquote>
         case 'code':
-            return <pre {...attributes}>{children}</pre>
+            return (
+                <pre>
+                    <code {...attributes}>{children}</code>
+                </pre>
+            )
         case 'bulleted-list':
             return <ul {...attributes}>{children}</ul>
         case 'heading-one':
@@ -328,13 +420,14 @@ const withHtml = editor => {
     )
   }
   
+  
   const Leaf = ({ attributes, children, leaf }) => {
     if (leaf.bold) {
-      children = <strong>{children}</strong>
+        children = <strong>{children}</strong>
     }
 
     if (leaf.code) {
-        children = <code>{children}</code>;
+        children = <code>{children}</code>
     }
   
     if (leaf.italic) {
@@ -362,6 +455,9 @@ const BlockButton = ({ format, icon }) => {
         case 'heading-two':
             iconCompo = (<MdLooksTwo size={24} />);
             break;
+        case 'heading-three':
+            iconCompo = (<MdLooks3 size={24} />);
+            break;
         case 'format_quote':
             iconCompo = (<MdFormatQuote size={24} />);
             break;
@@ -374,15 +470,15 @@ const BlockButton = ({ format, icon }) => {
     }
 
     return (
-      <Button
-        active={isBlockActive(editor, format)}
-        onMouseDown={event => {
-          event.preventDefault()
-          toggleBlock(editor, format)
-        }}
-      >
-        {iconCompo}
-      </Button>
+        <Button
+            active={isBlockActive(editor, format)}
+            onMouseDown={event => {
+            event.preventDefault()
+            toggleBlock(editor, format)
+            }}
+        >
+            {iconCompo}
+        </Button>
     )
   }
 
@@ -418,7 +514,7 @@ const MarkButton = ({ format, icon }) => {
     )
 }
 
-  const toggleBlock = (editor, format) => {
+const toggleBlock = (editor, format) => {
     const isActive = isBlockActive(editor, format)
     const isList = LIST_TYPES.includes(format)
   
@@ -435,56 +531,54 @@ const MarkButton = ({ format, icon }) => {
       const block = { type: format, children: [] }
       Transforms.wrapNodes(editor, block)
     }
-  }
+}
   
-  const toggleMark = (editor, format) => {
+const toggleMark = (editor, format) => {
     const isActive = isMarkActive(editor, format)
-  
     if (isActive) {
-      Editor.removeMark(editor, format)
+        Editor.removeMark(editor, format)
     } else {
-      Editor.addMark(editor, format, true)
+        Editor.addMark(editor, format, true)
     }
-  }
+}
   
-  const isBlockActive = (editor, format) => {
+const isBlockActive = (editor, format) => {
     const [match] = Editor.nodes(editor, {
-      match: n => n.type === format,
+        match: n => n.type === format,
     })
-  
     return !!match
-  }
+}
   
-  const isMarkActive = (editor, format) => {
+const isMarkActive = (editor, format) => {
     const marks = Editor.marks(editor)
     return marks ? marks[format] === true : false
-  }
+}
     
 
-  export const Menu = React.forwardRef(
+export const Menu = React.forwardRef(
     (
-      { className, ...props },
-      ref
+        { className, ...props },
+        ref
     ) => (
-      <div
+        <div
         {...props}
         ref={ref}
         className={cx(
-          className,
-          css`
+            className,
+            css`
             & > * {
-              display: inline-block;
+                display: inline-block;
             }
             & > * + * {
-              margin-left: 15px;
+                margin-left: 15px;
             }
-          `
+            `
         )}
-      />
+        />
     )
-  )
+)
 
-  export const Toolbar = React.forwardRef(
+export const Toolbar = React.forwardRef(
     (
       { className, ...props },
       ref
@@ -502,7 +596,7 @@ const MarkButton = ({ format, icon }) => {
         )}
       />
     )
-  )
+)
   
   export const Button = React.forwardRef(
     (
