@@ -11,6 +11,41 @@ export const config = {
   },
 }
 
+const updateView = (id) => {
+  client.update({
+    index: 'wnote',
+    type: 'note',
+    id: id,
+    body: {
+      // put the partial document under the `doc` key
+      script: {
+        lang: 'painless',
+        source: 'ctx._source.views++',
+      },
+    }
+  }, function (error, response) {
+    if (error) {
+      console.log("updateView:index error: " + error)
+      client.update({
+        index: 'wnote',
+        type: 'note',
+        id: id,
+        body: {
+          doc: {
+            views: 1
+          },
+        }
+      }, function (error, response) {
+        if (error){
+          console.log("index error: "+error, response)
+        }
+      });
+    } else {
+      console.log("Update view OK")
+    }
+  });
+}
+
 const handler = (req, res) => {
   console.log('api:[id]:', req.method);
 
@@ -34,11 +69,15 @@ const handler = (req, res) => {
 
   } else if (req.method === 'POST') {
     const { id } = req.query;
+    let views = req.body.views ? req.body.views : 0;
+    let bodyData = fnWrapDeletedAt(req.body)
+    bodyData.views = views
+    console.log('req.method:[id]:', id)
     client.index({
       index: 'wnote',
       id: id,
       type: 'note',
-      body: fnWrapDeletedAt(req.body)
+      body: bodyData
     },function(error, response, status) {
         if (error){
           responseError(res, error);
@@ -58,6 +97,7 @@ const handler = (req, res) => {
     });
   } else if (req.method == 'GET') {
     const { id } = req.query;
+    updateView(id)
     console.log('GET notedetail:', id, req.user)
     client.search({
       index: 'wnote',

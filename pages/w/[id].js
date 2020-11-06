@@ -1,5 +1,5 @@
 import Layout from '../../components/layout.js';
-import React, { useEffect, useState, useRef} from 'react';
+import React, { useEffect, useState, useRef, useCallback} from 'react';
 import { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
 import RichEditor from '../../components/RichEditor';
@@ -52,10 +52,10 @@ function WID(props) {
         props.newEmptyNote();
     };
 
-    let pushToService = () => {
+    let debouncePush = useRef(debounce(() => {
         const editorState = props.editorState;
         let rawTextSearch = serialize(editorState);
-       
+
         var body = {
             'content': JSON.stringify(editorState),
             'shortContent': {shortText: rawTextSearch.substring(0, 100), shortImage: null},
@@ -64,11 +64,9 @@ function WID(props) {
             'createdAt': new Date().getTime(),
             'updatedAt': new Date().getTime(),
         }
-        console.log('startSaveNote:', props.shouldSave);
+        console.log('startSaveNote:', props.shouldSave, body);
         props.startSaveNote([props.router.query.id, body])
-    };
-
-    let debouncePush = debounce(pushToService, 300);
+      }, 2300));
 
     let onChangeEditor = (editorState) => {
         props.updateEditorState(editorState);
@@ -77,7 +75,8 @@ function WID(props) {
     useEffect(() => {
         console.log('shouldSave:', props.shouldSave);
         if (props.shouldSave.length == 0) {
-            debouncePush();
+            console.log('trigger:debouncePush');
+            debouncePush.current();
         }
     }, [props.editorState]);
 
@@ -121,7 +120,7 @@ function WID(props) {
     let deleteNote = (e) => {
         props.deleteNote(props.noteActive._id);
     };
-    
+
     let logout = (e) => {
         router.push('/api/auth/logout')
     }
@@ -144,7 +143,7 @@ function WID(props) {
 
     const styleNotImage = {maxWidth: '100%'};
     const styleHasImage = {maxWidth: '122px'};
-      
+
     return (
         <main>
             <div id="stick-note">
@@ -168,10 +167,10 @@ function WID(props) {
                                 )
                                 })
                             }
-                            </ul>  
+                            </ul>
                         </div>
                 </div>
-            </div> 
+            </div>
             <div className="sidebar-note">
                 <div className="inner-list-note">
                     <p id="header-ln">notes</p>
@@ -231,11 +230,11 @@ function WID(props) {
                         </div>
                     </div>
                 </div>
-            
+
                 <div className="editor">
                     {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
-                    <RichEditor 
-                        value={props.editorState} 
+                    <RichEditor
+                        value={props.editorState}
                         editorRef={(e) => editorRef.current = e}
                         onChange={newValue => onChangeEditor(newValue)} />
                 </div>
