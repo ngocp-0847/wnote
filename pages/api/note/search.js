@@ -16,21 +16,32 @@ export default (req, res) => {
       index: 'wnote',
       body: {
         query: {
-          bool: {
-            must: [
-              {
-                bool: {
-                  should: [
-                    {match: {rawTextSearch: textSearch}},
-                    {wildcard: {'rawTextSearch.keyword': '*'+textSearch+'*'}}
-                  ]
-                }
-              }
-            ],
-            filter: [
-              {term: {'userID.keyword': req.body.userID}},
-            ],
-          }
+          function_score: {
+            query: {
+              bool: {
+                must: [
+                  {
+                    bool: {
+                      should: [
+                        {match: {rawTextSearch: textSearch}},
+                        {wildcard: {'rawTextSearch.keyword': '*'+textSearch+'*'}}
+                      ]
+                    }
+                  }
+                ],
+                filter: [
+                  {term: {'userID.keyword': req.body.userID}},
+                ],
+              },
+            },
+            script_score: {
+              script: {
+                source: "doc['views'].value",
+              },  
+            },
+            score_mode: 'sum',
+            boost_mode: 'sum',
+          },
         },
         from: 0,
         size: 20,

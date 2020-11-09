@@ -52,8 +52,7 @@ function WID(props) {
         props.newEmptyNote();
     };
 
-    let debouncePush = useRef(debounce(() => {
-        const editorState = props.editorState;
+    let debouncePush = useRef(debounce((editorState, noteID) => {
         let rawTextSearch = serialize(editorState);
 
         var body = {
@@ -64,8 +63,8 @@ function WID(props) {
             'createdAt': new Date().getTime(),
             'updatedAt': new Date().getTime(),
         }
-        console.log('startSaveNote:', props.shouldSave, body);
-        props.startSaveNote([props.router.query.id, body])
+        console.log('startSaveNote:', body);
+        props.startSaveNote([noteID, body])
       }, 2300));
 
     let onChangeEditor = (editorState) => {
@@ -76,7 +75,7 @@ function WID(props) {
         console.log('shouldSave:', props.shouldSave);
         if (props.shouldSave.length == 0) {
             console.log('trigger:debouncePush');
-            debouncePush.current();
+            debouncePush.current(props.editorState, props.router.query.id);
         }
     }, [props.editorState]);
 
@@ -96,7 +95,7 @@ function WID(props) {
         props.activeNoteSidebar(note)
     };
 
-    let debounceSearch = debounce(() => {
+    let debounceSearch = useRef(debounce((eventText, initFlag) => {
         console.log('search:debounceSearch:', eventText, initFlag.current);
         if (eventText != '') {
             props.setSearch(eventText);
@@ -106,7 +105,7 @@ function WID(props) {
             }
             initFlag.current = false;
         }
-    }, 300);
+      }, 1300));
 
     let search = (e) => {
         console.log('search:', e.target.value.trim())
@@ -114,7 +113,7 @@ function WID(props) {
     };
 
     useEffect(() => {
-        debounceSearch()
+        debounceSearch.current(eventText, initFlag)
     }, [eventText]);
 
     let deleteNote = (e) => {
