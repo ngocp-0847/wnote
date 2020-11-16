@@ -187,6 +187,12 @@ main .main-note {
       }
       code{
         font-size: 15px;
+        span{
+          background-color: #f1f1f1;
+          white-space: pre-wrap;
+          padding: 12px;
+          display: block;
+        }
       }
       table, tr, td, th {
         border: 1px solid #C0C0C0;

@@ -83,9 +83,6 @@ export const deserialize = (el, mAttrs = {}) => {
     const { nodeName } = el
     let parent = el
 
-    if (el.childNodes[0]) {
-        console.log('deserialize:sub', el.childNodes[0], el.childNodes[0].nodeName)
-    }
     let children = [];
     if (nodeName === 'PRE') {
         if (el.childNodes[0] && el.childNodes[0].nodeName === 'CODE') {
@@ -100,9 +97,10 @@ export const deserialize = (el, mAttrs = {}) => {
                 }
             })
     } else {
-        children = Array.from(parent.childNodes)
+        let childrenDes = Array.from(parent.childNodes)
             .map(deserialize)
-            .flat()
+        console.log('deserialize:', childrenDes)
+        children = childrenDes.flat()
     }
 
 
@@ -118,7 +116,7 @@ export const deserialize = (el, mAttrs = {}) => {
 
     if (TEXT_TAGS[nodeName]) {
         const attrs = TEXT_TAGS[nodeName](el); 
-        return children.map(child => jsx('text', attrs, child))
+        return children.filter(child => Text.isText(child)).map(child => jsx('text', attrs, child))
     }
 
     return children
@@ -128,7 +126,7 @@ export default function RichEditor(props) {
     const renderElement = useCallback(props => <Element {...props} />, [])
     const renderLeaf = useCallback(props => <Leaf {...props} />, [])
     const editor = useMemo(
-        () => withImages(withTables(withHtml(withReact(withHistory(createEditor()))))),
+        () => withLists(withImages(withTables(withHtml(withReact(withHistory(createEditor())))))),
         []
     )
     
@@ -181,6 +179,10 @@ export default function RichEditor(props) {
                             toggleMark(editor, mark)
                         }
                     }
+                    // if (event.key == 'Enter') {
+
+                    // }
+                    // console.log('onKeyDown:', event.key)
                 }}
 
             />
@@ -209,6 +211,51 @@ const fnRemoteImage = (editor, files) => {
             });
         }
     }
+}
+
+const withLists = editor => {
+    const { insertBreak, insertText, onKeyDown } = editor
+    console.log('check:', onKeyDown)
+    editor.insertBreak = () => {
+      const { selection } = editor
+  
+      if (selection) {
+        const [list] = Editor.nodes(editor, { match: n => n.type === 'list-item' })
+        console.log('withLists:', list)
+        if (list && list[0]) {
+            if (list[0].children[0].text.trim() == "") {
+                Transforms.unwrapNodes(editor, {
+                    match: n => LIST_TYPES.includes(n.type),
+                    split: true,
+                })
+            
+                Transforms.setNodes(editor, {
+                    type: 'paragraph',
+                })
+                return
+            }
+        }
+
+        const [codeBlocks] = Editor.nodes(editor, { match: n => n.code })
+        console.log('withCodes:', codeBlocks)
+        if (codeBlocks && codeBlocks[0]) {
+            // codeBlocks[1].pop()
+            insertText('\n')
+            // insertBreak()
+            // Transforms.setNodes(editor, {
+            //     type: 'paragraph',
+            //     code: true,
+            // })
+            // Node.elements()
+            // Transforms.mergeNodes(editor, {at: codeBlocks[1], match: n => n.code, mode: 'highest'})
+            return
+        }
+      }
+  
+      insertBreak()
+    }
+
+    return editor
 }
 
 const withImages = editor => {
@@ -323,9 +370,20 @@ const withHtml = editor => {
   
     editor.insertData = data => {
         const html = data.getData('text/html')
-    
+        console.log('withHtml:insertData:', html)
         if (html) {
             const parsed = new DOMParser().parseFromString(html, 'text/html')
+            // Process drag image
+            // const metaElem = parsed.getElementsByTagName('meta')
+            // if (metaElem) {
+            //     const imgElemCollection = parsed.getElementsByTagName('img')
+            //     console.log('withHtml:imgElemCollection:', imgElemCollection)
+            //     if (imgElemCollection) {
+            //         const src = imgElemCollection[0].getAttribute("src")
+            //         insertImage(editor, src)
+            //     }
+            //     return 
+            // }
             const fragment = deserialize(parsed.body)
             Transforms.insertFragment(editor, fragment)
             return
@@ -550,8 +608,12 @@ const isBlockActive = (editor, format) => {
 }
   
 const isMarkActive = (editor, format) => {
-    const marks = Editor.marks(editor)
-    return marks ? marks[format] === true : false
+    try {
+        const marks = Editor.marks(editor)
+        return marks ? marks[format] === true : false
+    } catch (e) {
+        return false
+    }
 }
     
 
