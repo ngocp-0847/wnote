@@ -47,28 +47,16 @@ const updateView = (id) => {
   });
 }
 
-const findOne = (id, userID) => {
+const findOne = (id) => {
   return new Promise((resolve, reject) => {
-    client.search({
+    client.get({
       index: 'wnote',
-      body: {
-        query: {
-          bool: {
-            must: [
-              {match: {_id: id}},
-              {match: {userID: userID}}
-            ]
-          }
-        },
-      }
-    }, function(error, response, status) {
-        if (error){
-          console.log("index error: " + error)
-          reject(error)
-        } else {
-          resolve(response.body.hits)
-        }
-    });
+      id: id
+    }).then(e => {
+      resolve(e.body)
+    }).catch(err => {
+      reject(err)
+    })
   });
 }
 
@@ -123,7 +111,7 @@ const handler = async (req, res) => {
               } catch (e) {
                 responseError(res, 'fail')
               }
-    
+
               body = fnBuildResponse(id, body)
               responseSuccess(res, body)
             }
@@ -136,21 +124,14 @@ const handler = async (req, res) => {
             doc: bodyData
           },
         }, function(error, response, status) {
-            if (error){
-              responseError(res, error);
+            if (error) {
               console.log("index error: "+error)
+              responseError(res, error);
             } else {
-              try {
-                var body = JSON.parse(response.meta.request.params.body);
-              } catch (e) {
-                responseError(res, 'fail')
-              }
-
+              console.log('findOne:', id, req.user._source.userGeneId)
               findOne(id, req.user._source.userGeneId).then((t) => {
-                responseSuccess(res, t[0])
+                responseSuccess(res, t)
               })
-              // body = fnBuildResponse(id, body)
-              // responseSuccess(res, body)
             }
         });
       }
@@ -185,8 +166,8 @@ const handler = async (req, res) => {
           console.log("index error: " + error)
           responseError(res, error);
         } else {
-          findOne(id, req.user._source.userGeneId).then((t) => {
-            responseSuccess(res, t[0])
+          findOne(id).then((t) => {
+            responseSuccess(res, t)
           })
         }
       });

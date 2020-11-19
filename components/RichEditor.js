@@ -20,7 +20,7 @@ import {
     MdFormatBold,
     MdFormatItalic,
     MdFormatListBulleted,
-    MdFormatListNumbered, MdFormatQuote, MdFormatUnderlined, MdImage, MdList, 
+    MdFormatListNumbered, MdFormatQuote, MdFormatUnderlined, MdImage, MdList,
     MdLooksOne, MdLooksTwo, MdLooks3
 } from 'react-icons/md';
 
@@ -109,13 +109,13 @@ export const deserialize = (el, mAttrs = {}) => {
     }
 
     if (ELEMENT_TAGS[nodeName]) {
-        const attrs = ELEMENT_TAGS[nodeName](el); 
-        
+        const attrs = ELEMENT_TAGS[nodeName](el);
+
         return jsx('element', attrs, children)
     }
 
     if (TEXT_TAGS[nodeName]) {
-        const attrs = TEXT_TAGS[nodeName](el); 
+        const attrs = TEXT_TAGS[nodeName](el);
         return children.filter(child => Text.isText(child)).map(child => jsx('text', attrs, child))
     }
 
@@ -129,9 +129,9 @@ export default function RichEditor(props) {
         () => withLists(withImages(withTables(withHtml(withReact(withHistory(createEditor())))))),
         []
     )
-    
+
     let fileUploadRef = useRef(null)
-    
+
     let onChangeUpload = (e) => {
         fnRemoteImage(editor, e.target.files)
     }
@@ -141,7 +141,7 @@ export default function RichEditor(props) {
    , []});
 
     return (
-        <Slate editor={editor} 
+        <Slate editor={editor}
             value={props.value}
             onChange={newValue => props.onChange(newValue)}>
             <Toolbar>
@@ -165,7 +165,7 @@ export default function RichEditor(props) {
                 </Button>
                 <input type="file" onChange={onChangeUpload} id="chooseFile" className="invisible" ref={fileUploadRef} />
             </Toolbar>
-            <Editable 
+            <Editable
                 className="slate-editor"
                 renderElement={renderElement}
                 renderLeaf={renderLeaf}
@@ -218,7 +218,7 @@ const withLists = editor => {
     console.log('check:', onKeyDown)
     editor.insertBreak = () => {
       const { selection } = editor
-  
+
       if (selection) {
         const [list] = Editor.nodes(editor, { match: n => n.type === 'list-item' })
         console.log('withLists:', list)
@@ -228,7 +228,7 @@ const withLists = editor => {
                     match: n => LIST_TYPES.includes(n.type),
                     split: true,
                 })
-            
+
                 Transforms.setNodes(editor, {
                     type: 'paragraph',
                 })
@@ -251,7 +251,7 @@ const withLists = editor => {
             return
         }
       }
-  
+
       insertBreak()
     }
 
@@ -280,14 +280,14 @@ const withImages = editor => {
 
     return editor
 }
-  
+
 const isImageUrl = url => {
     if (!url) return false
     if (!isUrl(url)) return false
     const ext = new URL(url).pathname.split('.').pop()
     return imageExtensions.includes(ext)
 }
-  
+
 const insertImage = (editor, url) => {
     const text = { text: '' }
     const image = { type: 'image', url, children: [text] }
@@ -296,105 +296,100 @@ const insertImage = (editor, url) => {
 
 const withTables = editor => {
     const { deleteBackward, deleteForward, insertBreak } = editor
-  
+
     editor.deleteBackward = unit => {
       const { selection } = editor
-  
+
       if (selection && Range.isCollapsed(selection)) {
         const [cell] = Editor.nodes(editor, {
           match: n => n.type === 'table-cell',
         })
-  
+
         if (cell) {
           const [, cellPath] = cell
           const start = Editor.start(editor, cellPath)
-  
+
           if (Point.equals(selection.anchor, start)) {
             return
           }
         }
       }
-  
+
       deleteBackward(unit)
     }
-  
+
     editor.deleteForward = unit => {
       const { selection } = editor
-  
+
       if (selection && Range.isCollapsed(selection)) {
         const [cell] = Editor.nodes(editor, {
           match: n => n.type === 'table-cell',
         })
-  
+
         if (cell) {
           const [, cellPath] = cell
           const end = Editor.end(editor, cellPath)
-  
+
           if (Point.equals(selection.anchor, end)) {
             return
           }
         }
       }
-  
+
       deleteForward(unit)
     }
-  
+
     editor.insertBreak = () => {
       const { selection } = editor
-  
+
       if (selection) {
         const [table] = Editor.nodes(editor, { match: n => n.type === 'table' })
-  
+
         if (table) {
           return
         }
       }
-  
+
       insertBreak()
     }
-  
+
     return editor
   }
 
 
 const withHtml = editor => {
     const { insertData, isInline, isVoid } = editor
-  
+
     editor.isInline = element => {
       return element.type === 'link' ? true : isInline(element)
     }
-  
+
     editor.isVoid = element => {
       return element.type === 'image' ? true : isVoid(element)
     }
-  
+
     editor.insertData = data => {
         const html = data.getData('text/html')
         console.log('withHtml:insertData:', html)
         if (html) {
             const parsed = new DOMParser().parseFromString(html, 'text/html')
-            // Process drag image
-            // const metaElem = parsed.getElementsByTagName('meta')
-            // if (metaElem) {
-            //     const imgElemCollection = parsed.getElementsByTagName('img')
-            //     console.log('withHtml:imgElemCollection:', imgElemCollection)
-            //     if (imgElemCollection) {
-            //         const src = imgElemCollection[0].getAttribute("src")
-            //         insertImage(editor, src)
-            //     }
-            //     return 
-            // }
             const fragment = deserialize(parsed.body)
-            Transforms.insertFragment(editor, fragment)
+            try {
+                Transforms.insertFragment(editor, fragment)
+            } catch (e) {
+                console.log('insertDat:e:', e)
+                alert('Cant insert data')
+            }
+
             return
         }
-    
+
         insertData(data)
     }
-  
+
     return editor
 }
-  
+
   const Element = props => {
     const { attributes, children, element } = props
     switch (element.type) {
@@ -458,7 +453,7 @@ const withHtml = editor => {
             return <p {...attributes}>{children}</p>
     }
   }
-  
+
   const ImageElement = ({ attributes, children, element }) => {
     const selected = useSelected()
     const focused = useFocused()
@@ -477,8 +472,8 @@ const withHtml = editor => {
       </div>
     )
   }
-  
-  
+
+
   const Leaf = ({ attributes, children, leaf }) => {
     if (leaf.bold) {
         children = <strong>{children}</strong>
@@ -487,19 +482,19 @@ const withHtml = editor => {
     if (leaf.code) {
         children = <code>{children}</code>
     }
-  
+
     if (leaf.italic) {
       children = <em>{children}</em>
     }
-  
+
     if (leaf.underline) {
       children = <u>{children}</u>
     }
-  
+
     if (leaf.strikethrough) {
       children = <del>{children}</del>
     }
-    
+
     return <span {...attributes}>{children}</span>
 }
 
@@ -575,22 +570,22 @@ const MarkButton = ({ format, icon }) => {
 const toggleBlock = (editor, format) => {
     const isActive = isBlockActive(editor, format)
     const isList = LIST_TYPES.includes(format)
-  
+
     Transforms.unwrapNodes(editor, {
       match: n => LIST_TYPES.includes(n.type),
       split: true,
     })
-  
+
     Transforms.setNodes(editor, {
       type: isActive ? 'paragraph' : isList ? 'list-item' : format,
     })
-  
+
     if (!isActive && isList) {
       const block = { type: format, children: [] }
       Transforms.wrapNodes(editor, block)
     }
 }
-  
+
 const toggleMark = (editor, format) => {
     const isActive = isMarkActive(editor, format)
     if (isActive) {
@@ -599,14 +594,14 @@ const toggleMark = (editor, format) => {
         Editor.addMark(editor, format, true)
     }
 }
-  
+
 const isBlockActive = (editor, format) => {
     const [match] = Editor.nodes(editor, {
         match: n => n.type === format,
     })
     return !!match
 }
-  
+
 const isMarkActive = (editor, format) => {
     try {
         const marks = Editor.marks(editor)
@@ -615,7 +610,7 @@ const isMarkActive = (editor, format) => {
         return false
     }
 }
-    
+
 
 export const Menu = React.forwardRef(
     (
@@ -659,7 +654,7 @@ export const Toolbar = React.forwardRef(
       />
     )
 )
-  
+
   export const Button = React.forwardRef(
     (
       {
@@ -709,4 +704,3 @@ export const Toolbar = React.forwardRef(
       />
     )
   )
-  
