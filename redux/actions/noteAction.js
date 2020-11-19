@@ -25,6 +25,8 @@ export const INIT_DETAIL_NOTE = 'INIT_DETAIL_NOTE';
 export const SAVE_NOTE_PINNED = 'SAVE_NOTE_PINNED';
 export const PIN_NOTE = 'PIN_NOTE';
 export const UPDATE_ITEM_NOTE_PIN = 'UPDATE_ITEM_NOTE_PIN';
+export const SAVE_TAGS = 'SAVE_TAGS';
+export const UPDATE_TAGS_SAVED = 'UPDATE_TAGS_SAVED';
 
 export const [
   loadListNote,
@@ -51,6 +53,8 @@ export const [
   saveNotePinned,
   pinNote,
   updateItemNotePin,
+  saveTags,
+  updateTagsSaved
   ] = [
   createAction(LOAD_LIST_NOTE),
   createAction(UPDATE_LIST_NOTE),
@@ -76,5 +80,7 @@ export const [
   createAction(SAVE_NOTE_PINNED),
   createAction(PIN_NOTE),
   createAction(UPDATE_ITEM_NOTE_PIN),
+  createAction(SAVE_TAGS),
+  createAction(UPDATE_TAGS_SAVED),
 ];
 

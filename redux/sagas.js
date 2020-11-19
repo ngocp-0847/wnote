@@ -21,7 +21,9 @@ import {
   initDetailnote,
   saveNotePinned,
   pinNote,
-  updateItemNotePin
+  updateItemNotePin,
+  saveTags,
+  updateTagsSaved
 } from './actions/noteAction';
 import noteService from './services/noteService.js';
 import authService from './services/authService.js';
@@ -161,8 +163,12 @@ function* fnNewEmptyNote() {
 function* fnLoadNoteById({ payload }) {
   console.log('fnLoadNoteById:', payload)
   yield put(changeStatusForSave(false)); //cancel save editor.
-  const data = yield noteService.fnLoadNoteByID(payload.noteID);
-
+  const response = yield noteService.fnLoadNoteByID(payload.noteID);
+  let data = [];
+  if (response.code == 200) {
+    data = response.data
+  }
+  
   if ((data.total.value && data.total.value > 0) || data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     try {
@@ -211,8 +217,15 @@ function* fnUnSearch() {
   yield* fnLoadListNote({payload: userID});
 }
 
+function* fnSaveTags({payload}) {
+  console.log('fnSaveTags', payload);
+  yield call(waitFor, state => state.note.shouldSave);
+  const tagsSaved = yield call([noteService, 'fnSaveTags'], payload[0], payload[1]);
+  yield put(updateTagsSaved({noteID: payload[0], tags: payload[1]['tags']}));
+}
+
 function* fnDeleteNote({ payload }) {
-  console.log('fnDeleteNote:',payload);
+  console.log('fnDeleteNote:', payload);
   yield put(changeStatusForSave(false));
   let body = {
     noteID: payload,
@@ -250,5 +263,6 @@ export default function* rootSaga(context) {
     takeLatest(unsetSearch().type, fnUnSearch),
     takeLatest(deleteNote().type, fnDeleteNote),
     takeLatest(pinNote().type, fnPinNote),
+    takeLatest(saveTags().type, fnSaveTags),
   ])
 }

@@ -5,6 +5,8 @@ import {connect} from 'react-redux';
 import RichEditor from '../../components/RichEditor';
 import { Transforms, Node } from 'slate';
 import Button from '@material-ui/core/Button';
+import AsyncCreatableSelect from 'react-select/async-creatable';
+import request from '../../redux/requestHelper';
 import Input from '@material-ui/core/Input';
 
 const serialize = value => {
@@ -30,20 +32,34 @@ import {
   deleteNote,
   loadDefineIdentity,
   initDetailnote,
-  pinNote
+  pinNote,
+  saveTags
 } from '../../redux/actions/noteAction';
 
 import classNames from 'classnames';
 import {debounce} from 'lodash';
 
-
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import Loader from 'react-loader-spinner';
 
 function WID(props) {
+    
     const [eventText, setEventText] = useState('');
     const initFlag = useRef(true);
     const editorRef = useRef(null);
+
+    const handleChangeTags = (tags) => {
+        console.log('handleChangeTags:', tags)
+        let ntags = [];
+        if (tags && Array.isArray(tags)) {
+            ntags = tags.map((item) => {return item.value})
+        }
+
+        let body = {
+            tags: ntags,
+        }
+        props.saveTags([props.router.query.id, body])
+    };
 
     let router = useRouter();
 
@@ -125,6 +141,16 @@ function WID(props) {
     }
 
     const [isPinned, setIsPinned] = useState(false);
+    
+    let tags = (props.noteActive._source && props.noteActive._source.tags) ? props.noteActive._source.tags : []
+    tags = tags.map((item) => {
+        return {
+            value: item,
+            label: item,
+        }
+    })
+
+    console.log('tags:', tags)
     let pinNote = (e) => {
         props.pinNote({noteID: props.noteActive._id, action: !isPinned});
     };
@@ -143,6 +169,41 @@ function WID(props) {
     const styleNotImage = {maxWidth: '100%'};
     const styleHasImage = {maxWidth: '122px'};
 
+    let onTabKeyDown = (e) => {
+        console.log('onTabKeyDown:', e.keyCode)
+    }
+    
+    let promisesOption = (inputValue) => {
+        let paramSearch = new URLSearchParams({search: inputValue}).toString()
+        return new Promise((resolve, reject) => {
+            request('/api/note/suggest-tags?' + paramSearch, {
+                method: 'GET', // *GET, POST, PUT, DELETE, etc.
+                mode: 'cors', // no-cors, *cors, same-origin
+                cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+                credentials: 'same-origin', // include, *same-origin, omit
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                redirect: 'follow', // manual, *follow, error
+                referrerPolicy: 'no-referrer', // no-referrer, *client,
+            }).then((response) => {
+                console.log('promisesOption:', response)
+                if (response.code == 200) {
+                    let optionRemotes = response.data.tags.body.hits.hits.map((item) => {
+                        return {
+                            value: item._id,
+                            label: item._id,
+                        }
+                    });
+                    console.log('optionRemotes:', optionRemotes)
+                    resolve(optionRemotes)
+                } else {
+                    resolve([]);
+                }
+            })
+        })
+    }
+
     return (
         <main>
             <div id="stick-note">
@@ -158,6 +219,7 @@ function WID(props) {
                                     && note._source.shortContent.shortImage) {
                                     styleText = styleHasImage;
                                 }
+                                
                                 return (
                                     <li key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
                                         onClick={activeNoteSidebar.bind(this, note)}>
@@ -217,6 +279,16 @@ function WID(props) {
                             Delete
                         </Button>
                     </div>
+                    <div id="tabs-area" className="">
+                        <AsyncCreatableSelect
+                            isMulti
+                            components={{ ClearIndicator:() => null }}
+                            onKeyDown={onTabKeyDown}
+                            onChange={handleChangeTags}
+                            value={tags}
+                            loadOptions={promisesOption}
+                        />
+                    </div>
                     <div className="flex flex-1 rounded-lg items-end justify-end">
                         <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img w-6"/></span>
                         <div className="m-2">
@@ -258,6 +330,7 @@ const mapDispatchToProps = {
     loadNoteById: loadNoteById,
     loadListNote: loadListNote,
     startSaveNote: startSaveNote,
+    saveTags: saveTags,
     routeChangeComplete: routeChangeComplete,
     updateEditorState: updateEditorState,
     newEmptyNote: newEmptyNote,

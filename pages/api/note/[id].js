@@ -2,6 +2,7 @@
 import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
 import client from '../../../lib/es';
 import withPassport from '../../../lib/withPassport'
+import { resolve } from 'path';
 
 export const config = {
   api: {
@@ -46,7 +47,32 @@ const updateView = (id) => {
   });
 }
 
-const handler = (req, res) => {
+const findOne = (id, userID) => {
+  return new Promise((resolve, reject) => {
+    client.search({
+      index: 'wnote',
+      body: {
+        query: {
+          bool: {
+            must: [
+              {match: {_id: id}},
+              {match: {userID: userID}}
+            ]
+          }
+        },
+      }
+    }, function(error, response, status) {
+        if (error){
+          console.log("index error: " + error)
+          reject(error)
+        } else {
+          resolve(response.body.hits)
+        }
+    });
+  });
+}
+
+const handler = async (req, res) => {
   console.log('api:[id]:', req.method);
 
   if (req.method === 'DELETE') {
@@ -70,31 +96,101 @@ const handler = (req, res) => {
   } else if (req.method === 'POST') {
     const { id } = req.query;
     let views = req.body.views ? req.body.views : 0;
+    let tags = req.body.tags ? req.body.tags : [];
     let bodyData = fnWrapDeletedAt(req.body)
     bodyData.views = views
-    console.log('req.method:[id]:', id)
-    client.index({
-      index: 'wnote',
-      id: id,
-      type: 'note',
-      body: bodyData
-    },function(error, response, status) {
-        if (error){
-          responseError(res, error);
-          console.log("index error: "+error)
-        } else {
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          try {
-            var body = JSON.parse(response.meta.request.params.body);
-          } catch (e) {
-            res.status(400).json('fail')
-          }
+    bodyData.tags = tags
 
-          body = fnBuildResponse(id, body)
-          res.status(200).json(body)
+    console.log('req.method:[id]:', id, bodyData)
+    if (bodyData.shortContent) {
+      const { body } = await client.exists({
+        index: 'wnote',
+        id: id
+      })
+
+      if (!body) {
+        client.index({
+          index: 'wnote',
+          id: id,
+          body: bodyData
+        }, function(error, response, status) {
+            if (error){
+              responseError(res, error);
+              console.log("index error: "+error)
+            } else {
+              try {
+                var body = JSON.parse(response.meta.request.params.body);
+              } catch (e) {
+                responseError(res, 'fail')
+              }
+    
+              body = fnBuildResponse(id, body)
+              responseSuccess(res, body)
+            }
+        });
+      } else {
+        client.update({
+          index: 'wnote',
+          id: id,
+          body: {
+            doc: bodyData
+          },
+        }, function(error, response, status) {
+            if (error){
+              responseError(res, error);
+              console.log("index error: "+error)
+            } else {
+              try {
+                var body = JSON.parse(response.meta.request.params.body);
+              } catch (e) {
+                responseError(res, 'fail')
+              }
+
+              findOne(id, req.user._source.userGeneId).then((t) => {
+                responseSuccess(res, t[0])
+              })
+              // body = fnBuildResponse(id, body)
+              // responseSuccess(res, body)
+            }
+        });
+      }
+
+    } else if (bodyData.tags) {
+      // Save tag in indendent index.
+      console.log('POST notes/[id]:tags:', bodyData.tags)
+      bodyData.tags.forEach(async tag => {
+        const { body } = await client.exists({
+          index: 'tags',
+          id: tag
+        })
+
+        if (!body) {
+          const results = await client.index({
+            index: 'tags',
+            id: tag,
+            body: {key: tag}
+          })
         }
-    });
+      })
+
+      // Save tags in note
+      client.update({
+        index: 'wnote',
+        id: id,
+        body: {
+          doc: bodyData
+        }
+      }, function(error, response, status) {
+        if (error) {
+          console.log("index error: " + error)
+          responseError(res, error);
+        } else {
+          findOne(id, req.user._source.userGeneId).then((t) => {
+            responseSuccess(res, t[0])
+          })
+        }
+      });
+    }
   } else if (req.method == 'GET') {
     const { id } = req.query;
     updateView(id)
@@ -111,14 +207,12 @@ const handler = (req, res) => {
           }
         },
       }
-    },function(error, response, status) {
+    }, function(error, response, status) {
         if (error){
+          console.log("index error: " + error)
           responseError(res, error);
-          console.log("index error: "+error)
         } else {
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.status(200).json(response.body.hits)
+          responseSuccess(res, response.body.hits)
         }
     });
   }
