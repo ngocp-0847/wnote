@@ -2,21 +2,6 @@ import client from '../../../../lib/es';
 import {responseError, responseSuccess} from '../../util';
 import { v4 as uuidv4 } from 'uuid';
 import withPassport from '../../../../lib/withPassport';
-import { isEmpty } from 'lodash';
-
-/**
- * Save user if not exists.
- * @param {} body
- */
-async function querySaveUser(body) {
-  const {userID} = body;
-  const userGeneId = uuidv4();
-  return client.index({
-    index: 'users',
-    id: uuidv4(),
-    body: {userID: userID, userGeneId: userGeneId}
-  });
-}
 
 async function savePinned(userObj, noteID) {
     console.log('savePinned:', userObj, noteID)
@@ -41,13 +26,13 @@ async function savePinned(userObj, noteID) {
                         ctx._source.pinned.add(params.note);
                     }
                 `,
-                params: { 
+                params: {
                     note: {
                         id: noteID,
                         order: 1,
                     },
                 }
-            }        
+            }
         }
     });
 }
@@ -70,13 +55,13 @@ async function unSavePinned(userObj, noteID) {
                     });
                     ctx._source.pinned = targets;
                 `,
-                params: { 
+                params: {
                     note: {
                         id: noteID,
                         order: 1,
                     },
                 }
-            }        
+            }
         }
     });
 }

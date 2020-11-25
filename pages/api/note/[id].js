@@ -2,7 +2,10 @@
 import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
 import client from '../../../lib/es';
 import withPassport from '../../../lib/withPassport'
-import { resolve } from 'path';
+const request = require('request');
+const kue = require('kue')
+, queue = kue.createQueue();
+
 
 export const config = {
   api: {
@@ -10,41 +13,6 @@ export const config = {
       sizeLimit: '50mb',
     },
   },
-}
-
-const updateView = (id) => {
-  client.update({
-    index: 'wnote',
-    type: 'note',
-    id: id,
-    body: {
-      // put the partial document under the `doc` key
-      script: {
-        lang: 'painless',
-        source: 'ctx._source.views++',
-      },
-    }
-  }, function (error, response) {
-    if (error) {
-      console.log("updateView:index error: " + error)
-      client.update({
-        index: 'wnote',
-        type: 'note',
-        id: id,
-        body: {
-          doc: {
-            views: 1
-          },
-        }
-      }, function (error, response) {
-        if (error){
-          console.log("index error: "+error, response)
-        }
-      });
-    } else {
-      console.log("Update view OK")
-    }
-  });
 }
 
 const findOne = (id) => {
@@ -66,7 +34,6 @@ const handler = async (req, res) => {
   if (req.method === 'DELETE') {
     client.update({
       index: 'wnote',
-      type: 'note',
       id: req.body.noteID,
       body: {
         // put the partial document under the `doc` key
@@ -139,6 +106,17 @@ const handler = async (req, res) => {
     } else if (bodyData.tags) {
       // Save tag in indendent index.
       console.log('POST notes/[id]:tags:', bodyData.tags)
+
+      if (tags.length > 0) {
+        var job = queue.create('index_vector_tag', {tags: tags, noteID: id}).save(function(error) {
+          if (!error)  {
+            console.log('job created success:' + job.id)
+          } else {
+            console.log('job created error' + error)
+          };
+        });
+      }
+
       bodyData.tags.forEach(async tag => {
         const { body } = await client.exists({
           index: 'tags',
@@ -174,7 +152,15 @@ const handler = async (req, res) => {
     }
   } else if (req.method == 'GET') {
     const { id } = req.query;
-    updateView(id)
+
+    var job = queue.create('update_view', {noteID: id}).save(function(error) {
+      if (!error)  {
+        console.log('update_view:job created success:' + job.id)
+      } else {
+        console.log('update_view:job created error' + error)
+      };
+    });
+
     console.log('GET notedetail:', id, req.user)
     client.search({
       index: 'wnote',

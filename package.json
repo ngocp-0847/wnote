@@ -9,6 +9,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@babel/preset-env": "^7.12.7",
+    "@babel/preset-react": "^7.12.7",
     "@elastic/elasticsearch": "^7.6.0",
     "@material-ui/core": "^4.11.0",
     "@zeit/next-sass": "^1.0.1",
@@ -31,6 +33,7 @@
     "is-url": "^1.2.4",
     "isomorphic-unfetch": "^3.0.0",
     "katex": "^0.12.0",
+    "kue": "^0.11.6",
     "lodash": "^4.17.15",
     "micro-redirect": "^1.0.2",
     "next": "^9.5.1",
@@ -67,8 +70,11 @@
     "uuid": "^7.0.2"
   },
   "devDependencies": {
+    "@babel/core": "^7.12.8",
+    "@babel/node": "^7.12.6",
     "@types/node": "^14.6.0",
     "@types/react": "^16.9.47",
+    "babel-preset-es2015": "^6.24.1",
     "postcss-preset-env": "^6.7.0",
     "tailwindcss": "^1.9.4",
     "typescript": "^4.0.2"

@@ -1,6 +1,8 @@
 const { Client } = require('@elastic/elasticsearch');
 const client = new Client({ node: process.env.ES_HOST });
+import { resolve } from 'path';
 import {responseError, responseSuccess} from '../util';
+const request = require('request')
 
 function sanitizeValue(value) {
   return value
@@ -8,10 +10,27 @@ function sanitizeValue(value) {
     .replace(/([+-=&|><!(){}[\]^"~*?:\\/])/g, '\\$1')
 }
 
-export default (req, res) => {
+function findEmberValue(text) {
+    return new Promise((resolve, reject) => {
+        request('http://127.0.0.1:5000/query?key='+text, { json: true }, (err, res, body) => {
+            if (err) {
+                console.log(err)
+                reject(err)
+            } else {
+                console.log('findSimilarTag:body:', body)
+                resolve(body)
+            }
+        });
+    })
+}
+
+export default async (req, res) => {
   if (req.method === 'POST') {
     let textSearch = sanitizeValue(req.body.text);
-    console.log('server:search:', req.body, req.body.text, textSearch);
+
+    let wordVector = await findEmberValue(textSearch);
+
+    console.log('server:search:', req.body, wordVector);
     client.search({
       index: 'wnote',
       body: {
@@ -24,7 +43,8 @@ export default (req, res) => {
                     bool: {
                       should: [
                         {match: {rawTextSearch: textSearch}},
-                        {wildcard: {'rawTextSearch.keyword': '*'+textSearch+'*'}}
+                        {wildcard: {'rawTextSearch.keyword': '*'+textSearch+'*'}},
+                        {match: {'tags': textSearch}}
                       ]
                     }
                   }
@@ -36,8 +56,9 @@ export default (req, res) => {
             },
             script_score: {
               script: {
-                source: "doc['views'].value",
-              },  
+                source: "(cosineSimilarity(params.tag_vector, 'tag_vector') + 1.0) + Math.log10(doc['views'].value + 1)",
+                params: {"tag_vector": wordVector}
+              },
             },
             score_mode: 'sum',
             boost_mode: 'sum',

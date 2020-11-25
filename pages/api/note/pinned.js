@@ -4,22 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import withPassport from '../../../lib/withPassport';
 import { isEmpty } from 'lodash';
 
-/**
- * Save user if not exists.
- * @param {} body
- */
-async function querySaveUser(body) {
-  const {userID} = body;
-  const userGeneId = uuidv4();
-  return client.index({
-    index: 'users',
-    id: uuidv4(),
-    body: {userID: userID, userGeneId: userGeneId}
-  });
-}
-
 async function searchPinned(userObj) {
     console.log('searchPinned:', userObj)
+
     let idsPinned = userObj._source.pinned ? userObj._source.pinned : [];
     console.log('searchPinned:idsPinned', idsPinned)
     if (!isEmpty(idsPinned)) {

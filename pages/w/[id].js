@@ -200,7 +200,7 @@ function WID(props) {
                 callback([])
             }
         })
-    }, 2300)
+    }, 500)
 
 
     return (

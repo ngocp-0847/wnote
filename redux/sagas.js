@@ -168,7 +168,7 @@ function* fnLoadNoteById({ payload }) {
   if (response.code == 200) {
     data = response.data
   }
-  
+
   if ((data.total.value && data.total.value > 0) || data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     try {
@@ -186,7 +186,6 @@ function* fnLoadNoteById({ payload }) {
 function* fnActiveNoteSidebar({ payload }) {
   console.log('fnActiveNoteSidebar', payload)
   yield put(changeStatusForSave(false)); //cancel save editor.
-//   yield put(updateEditorState(''));
   yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
   yield fnLoadNoteById({payload: {noteID: payload._id}})
   yield put(changeStatusForSave(true));
