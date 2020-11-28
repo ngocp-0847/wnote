@@ -16,7 +16,7 @@ const callbackJobTagVector = (job, done) => {
     request('http://127.0.0.1:5000/query?key='+paramString, { json: true }, (err, res, body) => {
         if (err) {
             console.log(err)
-            reject(err)
+            done()
         } else {
             console.log('findSimilarTag:body:', body)
             const bodyData = {

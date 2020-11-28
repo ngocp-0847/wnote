@@ -28,8 +28,6 @@ export default async (req, res) => {
   if (req.method === 'POST') {
     let textSearch = sanitizeValue(req.body.text);
 
-    let wordVector = await findEmberValue(textSearch);
-
     console.log('server:search:', req.body, wordVector);
     client.search({
       index: 'wnote',
@@ -56,8 +54,7 @@ export default async (req, res) => {
             },
             script_score: {
               script: {
-                source: "(cosineSimilarity(params.tag_vector, 'tag_vector') + 1.0) + Math.log10(doc['views'].value + 1)",
-                params: {"tag_vector": wordVector}
+                source: "Math.log10(doc['views'].value + 1)",
               },
             },
             score_mode: 'sum',

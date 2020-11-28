@@ -14,7 +14,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 tf.disable_eager_execution()
 config = tf.ConfigProto()
-# session = tf.Session(config=config)
 
 app = Flask(__name__)
 
