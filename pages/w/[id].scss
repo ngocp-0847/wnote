@@ -1,34 +1,18 @@
 #header-editor{
-  padding: 13px;
-  // margin: 10px;
-  display: flex;
-  flex-direction: row;
+  // padding: 13px;
+  // // margin: 10px;
+  // display: flex;
+  // flex-direction: row;
   h4{
     margin: 2px;
   }
-  #con-r-n{
-    #btn-n-note{
-      align-self: center;
-      border-radius: 3px;
-      margin: 0px 5px;
-      cursor: pointer;
-      padding: 5px 12px;
-      background-color: #89b3de;
-      color: white;
-      font-weight: bold;
-    }
-  }
+
   #con-r{
-    margin-left: 12px;
+    margin: 0px 12px;
     #btn-p-no{
-      align-self: center;
-      border-radius: 3px;
-      margin: 0px 5px;
-      padding: 5px 12px;
-      background-color: #008a00;
-      font-weight: bold;
-      color: white;
-      cursor: pointer;
+    }
+    #btn-delete{
+      margin-left: 10px;
     }
   }
   .auth{
@@ -46,17 +30,6 @@
     }
     #wr-ar-lo{
       #btn-logout {
-        align-self: center;
-        border-radius: 3px;
-        margin: 0px 5px;
-        padding: 5px 12px 6px 12px;
-        background-color: #d6c3c3;
-        font-weight: bold;
-        color: white;
-        cursor: pointer;
-        font-size: 13px;
-        display: block;
-        border: 1px solid black;
       }
     }
     #btn-login{
@@ -82,14 +55,6 @@
       color: white;
       cursor: pointer;
     }
-  }
-}
-
-.wrap-search{
-  margin-left: 15px;
-  .input-search{
-    width: 360px;
-    height: 32px;
   }
 }
 
@@ -194,6 +159,8 @@ main .main-note {
   .editor{
     flex: 1;
     height: calc(100% - 93px);
+    display: flex;
+    flex-direction: column;
     .wrap-editor{
       flex: 1;
       height:  100%;
@@ -233,19 +200,6 @@ main .main-note {
   }
 }
 
-.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before {
-  content: 'Normal';
-  font-size: 16px !important;
-}
-.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before {
-  content: 'Large';
-  font-size: 18px !important;
-}
-.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before {
-  content: 'Huge';
-  font-size: 20px !important;
-}
-
 .area-login{
   .recomme{
     .icon-home{
@@ -268,4 +222,12 @@ main .main-note {
     border-radius: 4px;
     cursor: pointer;
   }  
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+#tabs-area{
+  min-width: 140px;
 }

@@ -7,7 +7,7 @@ function Login(props) {
   const router = useRouter();
   
   return (
-    <div className="area-login">
+    <div className="area-login container mx-auto">
       <div className="recomme">
         <h1 className="title">WNote, note for everything super fast</h1>
         <div className="guide-l">

@@ -1,4 +1,4 @@
-import {put, call, takeLatest, all, select, take} from 'redux-saga/effects';
+import {put, call, takeLatest, takeEvery, all, select, take} from 'redux-saga/effects';
 import {
   startSaveNote,
   updateItemList,
@@ -21,7 +21,9 @@ import {
   initDetailnote,
   saveNotePinned,
   pinNote,
-  updateItemNotePin
+  updateItemNotePin,
+  saveTags,
+  updateTagsSaved
 } from './actions/noteAction';
 import noteService from './services/noteService.js';
 import authService from './services/authService.js';
@@ -132,39 +134,43 @@ function* fnLoadNoteLastest(action) {
 }
 
 function* fnNewEmptyNote() {
-  var noteID = uuidv4();
-  console.log('fnNewEmptyNote:', noteID)
-  yield put(changeStatusForSave(false)); //cancel save editor.
-  yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
-  var editorState = '';
-  yield put(updateEditorState(editorState));
-  var body = {
-    'content': '',
-    'rawTextSearch': '',
-    'shortContent': {shortText: null, shortImage: null},
-    'userID': localStorage.getItem('userID'),
-    'createdAt': new Date().getTime(),
-    'updatedAt': new Date().getTime(),
-    'deletedAt': null,
-  };
+    var noteID = uuidv4();
+    console.log('fnNewEmptyNote:', noteID)
+    yield put(changeStatusForSave(false)); //cancel save editor.
+    yield call(Router.push, `/w/[id]`, `/w/${noteID}`, {shallow:true});
+    var editorState = '';
 
-  const noteSaved = yield call([noteService, 'fnSaveNote'], noteID, body);
+    yield put(updateEditorState(editorState));
+    var body = {
+        'content': JSON.stringify(editorState),
+        'rawTextSearch': '',
+        'shortContent': {shortText: null, shortImage: null},
+        'userID': localStorage.getItem('userID'),
+        'createdAt': new Date().getTime(),
+        'updatedAt': new Date().getTime(),
+        'deletedAt': null,
+    };
 
-  yield put(updateItemList(noteSaved));
-  yield put(changeStatusForSave(true)); //cancel save editor.
+    const noteSaved = yield call([noteService, 'fnSaveNote'], noteID, body);
+
+    yield put(updateItemList(noteSaved));
+    yield put(changeStatusForSave(true)); //cancel save editor.
 }
 
 function* fnLoadNoteById({ payload }) {
   console.log('fnLoadNoteById:', payload)
   yield put(changeStatusForSave(false)); //cancel save editor.
-  const data = yield noteService.fnLoadNoteByID(payload.noteID);
+  const response = yield noteService.fnLoadNoteByID(payload.noteID);
+  let data = [];
+  if (response.code == 200) {
+    data = response.data
+  }
 
-  if (data.total > 0) {
+  if ((data.total.value && data.total.value > 0) || data.total > 0) {
     yield put(fillNoteActive(data.hits[0]));
     try {
-      // console.log('fnLoadNoteById:beforeClearContent:');
       console.log('fnLoadNoteById:beforeSetContent:');
-      yield put(updateEditorState(data.hits[0]._source.content));
+      yield put(updateEditorState(JSON.parse(data.hits[0]._source.content)));
     } catch(e) {
       console.log('fnLoadNoteById:catch:', e);
       yield put(updateEditorState(''));
@@ -174,38 +180,62 @@ function* fnLoadNoteById({ payload }) {
 }
 
 function* fnActiveNoteSidebar({ payload }) {
-  console.log('fnActiveNoteSidebar', payload)
-  yield put(changeStatusForSave(false)); //cancel save editor.
-  yield put(updateEditorState(''));
-  yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
-  yield fnLoadNoteById({payload: {noteID: payload._id}})
-  yield put(changeStatusForSave(true));
+    console.log('fnActiveNoteSidebar', payload)
+    yield put(changeStatusForSave(false)); //cancel save editor.
+    yield put(updateEditorState(''));
+
+    let textSearch = yield select((state) => state.note.textSearch);
+
+    if (textSearch && !isEmpty(textSearch.trim())) {
+        console.log('fnActiveNoteSidebar:textSearch:', textSearch)
+        yield call(Router.push, `/w/[id]`, `/w/${payload._id}?search=` + textSearch, {shallow:true}); 
+    } else {
+        yield call(Router.push, `/w/[id]`, `/w/${payload._id}`, {shallow:true});
+    }
+    yield fnLoadNoteById({payload: {noteID: payload._id}})
+    yield put(changeStatusForSave(true));
 }
 
 function* fnSearch({ payload }) {
-  console.log('fnSearch', payload)
-  let body = {
-    userID: localStorage.getItem('userID'),
-    text: payload,
-  }
-  const results = yield call([noteService, 'fnSearch'], body);
-  console.log('fnSearch:call', results)
-  yield put(updateListNote(results.data.hits));
-  let noteLastest = !isEmpty(results.data.hits) ? results.data.hits[0] : null;
-  console.log('fnSearch:noteLastest:', noteLastest);
-  if (noteLastest) {
-    yield* fnActiveNoteSidebar({payload: {_id: noteLastest._id}});
-  }
+    console.log('fnSearch', payload)
+    let body = {
+        userID: localStorage.getItem('userID'),
+        text: payload,
+    }
+    yield put(changeStatusForSave(false));
+    const results = yield call([noteService, 'fnSearch'], body);
+    yield put(changeStatusForSave(true));
+
+    console.log('fnSearch:call', results)
+    yield put(updateListNote(results.data.hits));
+
+    let noteLastest = !isEmpty(results.data.hits) ? results.data.hits[0] : null;
+    console.log('fnSearch:noteLastest:', noteLastest);
+    if (noteLastest) {
+        yield fnActiveNoteSidebar({payload: {_id: noteLastest._id}});
+    } else {
+        const router = Router.router;
+        yield call(Router.push, `/w/[id]`, `/w/${router.query.id}?search=` + payload, {shallow:true});
+    }
 }
 
 function* fnUnSearch() {
-  console.log('fnUnSearch');
-  var userID = localStorage.getItem('userID');
-  yield* fnLoadListNote({payload: userID});
+    console.log('fnUnSearch', router);
+    var userID = localStorage.getItem('userID');
+    const router = Router.router;
+    yield call(Router.push, `/w/[id]`, `/w/${router.query.id}`, {shallow:true});
+    yield* fnLoadListNote({payload: userID});
+}
+
+function* fnSaveTags({payload}) {
+  console.log('fnSaveTags', payload);
+  yield call(waitFor, state => state.note.shouldSave);
+  const tagsSaved = yield call([noteService, 'fnSaveTags'], payload[0], payload[1]);
+  yield put(updateTagsSaved({noteID: payload[0], tags: payload[1]['tags']}));
 }
 
 function* fnDeleteNote({ payload }) {
-  console.log('fnDeleteNote:',payload);
+  console.log('fnDeleteNote:', payload);
   yield put(changeStatusForSave(false));
   let body = {
     noteID: payload,
@@ -239,9 +269,10 @@ export default function* rootSaga(context) {
     takeLatest(loadNoteById().type, fnLoadNoteById),
     takeLatest(newEmptyNote().type, fnNewEmptyNote),
     takeLatest(activeNoteSidebar().type, fnActiveNoteSidebar),
-    takeLatest(setSearch().type, fnSearch),
+    takeEvery(setSearch().type, fnSearch),
     takeLatest(unsetSearch().type, fnUnSearch),
     takeLatest(deleteNote().type, fnDeleteNote),
     takeLatest(pinNote().type, fnPinNote),
+    takeLatest(saveTags().type, fnSaveTags),
   ])
 }

@@ -2,6 +2,10 @@
 import {responseError, responseSuccess, fnBuildResponse, fnWrapDeletedAt} from '../util';
 import client from '../../../lib/es';
 import withPassport from '../../../lib/withPassport'
+const request = require('request');
+const kue = require('kue')
+, queue = kue.createQueue();
+
 
 export const config = {
   api: {
@@ -11,13 +15,25 @@ export const config = {
   },
 }
 
-const handler = (req, res) => {
+const findOne = (id) => {
+  return new Promise((resolve, reject) => {
+    client.get({
+      index: 'wnote',
+      id: id
+    }).then(e => {
+      resolve(e.body)
+    }).catch(err => {
+      reject(err)
+    })
+  });
+}
+
+const handler = async (req, res) => {
   console.log('api:[id]:', req.method);
 
   if (req.method === 'DELETE') {
     client.update({
       index: 'wnote',
-      type: 'note',
       id: req.body.noteID,
       body: {
         // put the partial document under the `doc` key
@@ -34,30 +50,117 @@ const handler = (req, res) => {
 
   } else if (req.method === 'POST') {
     const { id } = req.query;
-    client.index({
-      index: 'wnote',
-      id: id,
-      type: 'note',
-      body: fnWrapDeletedAt(req.body)
-    },function(error, response, status) {
-        if (error){
-          responseError(res, error);
-          console.log("index error: "+error)
-        } else {
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          try {
-            var body = JSON.parse(response.meta.request.params.body);
-          } catch (e) {
-            res.status(400).json('fail')
-          }
+    let views = req.body.views ? req.body.views : 0;
+    let tags = req.body.tags ? req.body.tags : [];
+    let bodyData = fnWrapDeletedAt(req.body)
+    bodyData.views = views
+    bodyData.tags = tags
 
-          body = fnBuildResponse(id, body)
-          res.status(200).json(body)
+    console.log('req.method:[id]:', id, bodyData)
+    if (bodyData.shortContent) {
+      const { body } = await client.exists({
+        index: 'wnote',
+        id: id
+      })
+
+      if (!body) {
+        client.index({
+          index: 'wnote',
+          id: id,
+          body: bodyData
+        }, function(error, response, status) {
+            if (error){
+              responseError(res, error);
+              console.log("index error: "+error)
+            } else {
+              try {
+                var body = JSON.parse(response.meta.request.params.body);
+              } catch (e) {
+                responseError(res, 'fail')
+              }
+
+              body = fnBuildResponse(id, body)
+              responseSuccess(res, body)
+            }
+        });
+      } else {
+        client.update({
+          index: 'wnote',
+          id: id,
+          body: {
+            doc: bodyData
+          },
+        }, function(error, response, status) {
+            if (error) {
+              console.log("index error: "+error)
+              responseError(res, error);
+            } else {
+              console.log('findOne:', id, req.user._source.userGeneId)
+              findOne(id, req.user._source.userGeneId).then((t) => {
+                responseSuccess(res, t)
+              })
+            }
+        });
+      }
+
+    } else if (bodyData.tags) {
+      // Save tag in indendent index.
+      console.log('POST notes/[id]:tags:', bodyData.tags)
+
+      if (tags.length > 0) {
+        var job = queue.create('index_vector_tag', {tags: tags, noteID: id}).save(function(error) {
+          if (!error)  {
+            console.log('job created success:' + job.id)
+          } else {
+            console.log('job created error' + error)
+          };
+        });
+      }
+
+      bodyData.tags.forEach(async tag => {
+        const { body } = await client.exists({
+          index: 'tags',
+          id: tag
+        })
+
+        if (!body) {
+          const results = await client.index({
+            index: 'tags',
+            id: tag,
+            body: {key: tag}
+          })
         }
-    });
+      })
+
+      // Save tags in note
+      client.update({
+        index: 'wnote',
+        id: id,
+        body: {
+          doc: bodyData
+        }
+      }, function(error, response, status) {
+        if (error) {
+          console.log("index error: " + error)
+          responseError(res, error);
+        } else {
+          findOne(id).then((t) => {
+            responseSuccess(res, t)
+          })
+        }
+      });
+    }
   } else if (req.method == 'GET') {
     const { id } = req.query;
+
+    var job = queue.create('update_view', {noteID: id}).save(function(error) {
+      if (!error)  {
+        console.log('update_view:job created success:' + job.id)
+      } else {
+        console.log('update_view:job created error' + error)
+      };
+    });
+
     console.log('GET notedetail:', id, req.user)
     client.search({
       index: 'wnote',
@@ -71,14 +174,12 @@ const handler = (req, res) => {
           }
         },
       }
-    },function(error, response, status) {
+    }, function(error, response, status) {
         if (error){
+          console.log("index error: " + error)
           responseError(res, error);
-          console.log("index error: "+error)
         } else {
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.status(200).json(response.body.hits)
+          responseSuccess(res, response.body.hits)
         }
     });
   }

@@ -2,7 +2,7 @@ import Head from 'next/head';
 
 const withLayout = (Page) => {
   return (props) => (
-      <div className="container">
+      <div className="w-container">
         <Head>
           <title>Note everything</title>
           <link rel="icon" href="/png-clipart-computer-icons-bookmark-favicon-icon-free-bookmark-miscellaneous-angle.png" />
@@ -22,7 +22,7 @@ const withLayout = (Page) => {
           * {
             box-sizing: border-box;
           }
-          .container{
+          .w-container{
             width: 100%;
             height: 100%;
             display: flex;
