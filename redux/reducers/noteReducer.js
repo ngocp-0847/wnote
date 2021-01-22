@@ -16,11 +16,7 @@ import update from 'immutability-helper';
 
 const noteReducer = (state =
   {value: 0, notes: [], notesPinned: [], isSearch: true, textSearch: '', noteActive: {},
-    shouldSave: [1], editorState: [
-      {
-        children: [{ text: '' }],
-      },
-    ], userAuth: null}, action) => {
+    shouldSave: [1], editorState: '', userAuth: null}, action) => {
     
     let indexNoteActive;
 
@@ -73,7 +69,6 @@ const noteReducer = (state =
                 indexNoteActive = findIndex(state.notes, (note) => {
                     return note._id == action.payload.data._id;
                 });
-                
                 console.log('UPDATE_ITEM_LIST:', action.payload, indexNoteActive)
                 
                 if (indexNoteActive != -1) {
@@ -83,6 +78,7 @@ const noteReducer = (state =
                     let newArrNotes = update(state.notes, {$splice: [[indexNoteActive,1]]});
                     newArrNotes = update(newArrNotes, {$unshift: [newItem]});
                     let noteActive = Object.assign({}, state.notes[indexNoteActive]);
+
                     return {...state, notes: newArrNotes, noteActive: noteActive};
                 } else {
                     newArrNotes = update(state.notes, {$unshift: [action.payload.data]})

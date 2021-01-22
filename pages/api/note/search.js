@@ -28,7 +28,7 @@ export default async (req, res) => {
   if (req.method === 'POST') {
     let textSearch = sanitizeValue(req.body.text);
 
-    console.log('server:search:', req.body, wordVector);
+    console.log('server:search:', req.body);
     client.search({
       index: 'wnote',
       body: {

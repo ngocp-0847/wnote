@@ -1,23 +1,13 @@
 import Layout from '../../components/layout.js';
-import React, { useEffect, useState, useRef, useCallback} from 'react';
+import React, {Component, useEffect, useState, useRef} from 'react';
+
 import { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
-import RichEditor from '../../components/RichEditor';
-import { Transforms, Node } from 'slate';
 import Button from '@material-ui/core/Button';
 import AsyncCreatableSelect from 'react-select/async-creatable';
 import request from '../../redux/requestHelper';
 import Input from '@material-ui/core/Input';
-
-const serialize = value => {
-    return (
-      value
-        // Return the string content of each paragraph in the value's children.
-        .map(n => Node.string(n))
-        // Join them all with line breaks denoting paragraphs.
-        .join('\n')
-    )
-}
+import NoSSR from 'react-no-ssr';
 
 import {
   loadListNote,
@@ -38,15 +28,108 @@ import {
 
 import classNames from 'classnames';
 import {debounce} from 'lodash';
+import 'react-quill/dist/quill.snow.css';
+
+import highlight from 'highlight.js';
+import 'highlight.js/styles/github-gist.css';
 
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import Loader from 'react-loader-spinner';
+
+class FormHtmlEditor extends Component {
+    constructor(props) {
+      super(props)
+      if (typeof document !== 'undefined') {
+          highlight.configure({
+              languages: ['javascript', 'php'],
+          })
+          this.quill = require('react-quill');
+          const ImageUploader = require('../../quill-image-uploader/src/quill.imageUploader');
+          var Size = this.quill.Quill.import('attributors/style/size');
+          Size.whitelist = ['16px', '18px', '20px'];
+          this.quill.Quill.register(Size, true);
+  
+          this.quill.Quill.register({
+              "modules/imageUploader": ImageUploader.default,
+          });
+          this.refQuill = null;
+      }
+    }
+  
+    modules = {
+      syntax: {
+          highlight: text => highlight.highlightAuto(text).value,
+      },
+      toolbar: [
+          ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+          ['blockquote', 'code-block'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['link', 'image'],
+          [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+          [{ 'size': ['16px', '18px', '20px'] }],
+          [{ 'header': [1, 2, 3, 4, false] }],
+          [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+          [{ 'font': [] }],
+          [{ 'align': [] }],
+          ['clean']  
+      ],
+      clipboard: {
+          matchVisual: false,
+      },
+      imageUploader: {
+          upload: file => {
+              return new Promise((resolve, reject) => {
+                  const formData = new FormData();
+                  formData.append("image", file);
+                  fetch("/api/note/upload",
+                    {
+                      method: "POST",
+                      body: formData
+                    }
+                  )
+                    .then(response => response.json())
+                    .then(result => {
+                      console.log(result);
+                      resolve(result.data.uri);
+                    })
+                    .catch(error => {
+                      reject("Upload failed");
+                      console.error("Error:", error);
+                    });
+              });
+          }
+      },
+    }
+    getRef() {
+      return this.refQuill
+    }
+    getEditor() {
+      return this.refQuill.getEditor()
+    }
+    render() {
+      const Quill = this.quill
+      if (Quill) {
+        return (
+          <Quill
+              modules={this.modules}
+              ref={(e) => {this.refQuill = e}}
+              onChange={this.props.onChange}
+              value={this.props.value}
+              theme='snow'
+          />
+        )
+      } else {
+        return null
+      }
+    }
+}
+
 
 function WID(props) {
     console.log('rerun:WID')
     const [eventText, setEventText] = useState('');
     const initFlag = useRef(true);
-    const editorRef = useRef(null);
+    const reactQuillRef = useRef();
 
     const handleChangeTags = (tags) => {
         console.log('handleChangeTags:', tags)
@@ -64,13 +147,10 @@ function WID(props) {
     let router = useRouter();
 
     let onNewNote = () => {
-        Transforms.deselect(editorRef.current);
         props.newEmptyNote();
     };
 
-    let debouncePush = useRef(debounce((editorState, noteID) => {
-        let rawTextSearch = serialize(editorState);
-
+    let debouncePush = useRef(debounce((editorState, noteID, rawTextSearch) => {
         var body = {
             'content': JSON.stringify(editorState),
             'shortContent': {shortText: rawTextSearch.substring(0, 100), shortImage: null},
@@ -79,7 +159,7 @@ function WID(props) {
             'createdAt': new Date().getTime(),
             'updatedAt': new Date().getTime(),
         }
-        console.log('startSaveNote:', body);
+
         props.startSaveNote([noteID, body])
       }, 2300));
 
@@ -90,8 +170,12 @@ function WID(props) {
     useEffect(() => {
         console.log('shouldSave:', props.shouldSave);
         if (props.shouldSave.length == 0) {
-            console.log('trigger:debouncePush');
-            debouncePush.current(props.editorState, props.router.query.id);
+            console.log('trigger:debouncePush:', props.router.query.id);
+            let rawTextSearch = '';
+            if (reactQuillRef.current != null) {
+                rawTextSearch = reactQuillRef.current.getEditor().getText();
+                debouncePush.current(props.editorState, props.router.query.id, rawTextSearch);
+            }
         }
     }, [props.editorState]);
 
@@ -101,9 +185,6 @@ function WID(props) {
     }, []);
 
     useEffect(() => {
-        if (editorRef.current) {
-            console.log('router:change:', editorRef.current)
-        }
         console.log('query:change:');
     }, [router.query.id]);
 
@@ -300,15 +381,14 @@ function WID(props) {
                         </div>
                     </div>
                 </div>
-
-                <div className="editor">
-                    {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
-                    <RichEditor
-                        value={props.editorState}
-                        editorRef={(e) => editorRef.current = e}
-                        onChange={newValue => onChangeEditor(newValue)} />
-                </div>
-
+                <NoSSR>
+                    <div className="editor">
+                        {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
+                        <FormHtmlEditor value={props.editorState}
+                            ref={reactQuillRef}
+                            onChange={onChangeEditor} />
+                    </div>
+                </NoSSR>
             </div>
         </main>
     )
