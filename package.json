@@ -28,6 +28,7 @@
     "highlight.js": "^10.5.0",
     "html-to-draftjs": "^1.5.0",
     "image-extensions": "^1.1.0",
+    "immer": "^8.0.1",
     "immutability-helper": "^3.0.1",
     "is-hotkey": "^0.1.6",
     "is-url": "^1.2.4",

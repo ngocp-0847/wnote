@@ -1,12 +1,12 @@
 import Layout from '../../components/layout.js';
-import React, {Component, useEffect, useState, useRef} from 'react';
+import React, {Component, useEffect, useState, useRef, useCallback, useMemo} from 'react';
 
 import { useRouter, withRouter } from 'next/router';
 import {connect} from 'react-redux';
-import Button from '@material-ui/core/Button';
+import Button from '../../components/Button';
 import AsyncCreatableSelect from 'react-select/async-creatable';
 import request from '../../redux/requestHelper';
-import Input from '@material-ui/core/Input';
+import Input from '../../components/Input';
 import NoSSR from 'react-no-ssr';
 
 import {
@@ -23,7 +23,8 @@ import {
   loadDefineIdentity,
   initDetailnote,
   pinNote,
-  saveTags
+  saveTags,
+  loadNotesPagi,
 } from '../../redux/actions/noteAction';
 
 import classNames from 'classnames';
@@ -36,6 +37,31 @@ import 'highlight.js/styles/github-gist.css';
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import Loader from 'react-loader-spinner';
 
+const customStylesSelect = {
+    menu: (provided, state) => ({
+        ...provided,
+        width: state.selectProps.width,
+        // borderBottom: '1px dotted pink',
+        color: state.selectProps.menuColor,
+        // padding: 10,
+    }),
+    control: (provided) => ({
+        ...provided,
+        width: 200,
+        backgroundColor: '#edf2f7',
+        borderTop: 'none',
+        borderRight: 'none',
+        borderLeft: 'none',
+        borderRadius: 'none',
+    }),
+    multiValueLabel: (provided) => ({
+        ...provided,
+        backgroundColor: '#64ea86',
+    }),
+    container: style => ({
+        ...style,
+    }),
+}
 class FormHtmlEditor extends Component {
     constructor(props) {
       super(props)
@@ -107,23 +133,22 @@ class FormHtmlEditor extends Component {
       return this.refQuill.getEditor()
     }
     render() {
-      const Quill = this.quill
-      if (Quill) {
-        return (
-          <Quill
-              modules={this.modules}
-              ref={(e) => {this.refQuill = e}}
-              onChange={this.props.onChange}
-              value={this.props.value}
-              theme='snow'
-          />
-        )
-      } else {
-        return null
-      }
+        const Quill = this.quill
+        if (Quill) {
+            return (
+            <Quill
+                modules={this.modules}
+                ref={(e) => {this.refQuill = e}}
+                onChange={this.props.onChange}
+                value={this.props.value}
+                theme='snow'
+            />
+            )
+        } else {
+            return null
+        }
     }
 }
-
 
 function WID(props) {
     console.log('rerun:WID')
@@ -131,7 +156,7 @@ function WID(props) {
     const initFlag = useRef(true);
     const reactQuillRef = useRef();
 
-    const handleChangeTags = (tags) => {
+    const handleChangeTags = useCallback((tags) => {
         console.log('handleChangeTags:', tags)
         let ntags = [];
         if (tags && Array.isArray(tags)) {
@@ -142,7 +167,7 @@ function WID(props) {
             tags: ntags,
         }
         props.saveTags([props.router.query.id, body])
-    };
+    }, [props.router.query.id]);
 
     let router = useRouter();
 
@@ -282,7 +307,20 @@ function WID(props) {
             }
         })
     }, 500)
+    
+    const mergedStylesSelect = useMemo(
+        () => ({
+          ...customStylesSelect,
+        }),
+    );
 
+    const handleScrollList = (e) => {
+        const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
+        if (bottom) { 
+            console.log('handleScrollList:touchbottom');
+            props.loadNotesPagi();
+        }
+    }
 
     return (
         <main>
@@ -315,7 +353,7 @@ function WID(props) {
             <div className="sidebar-note">
                 <div className="inner-list-note">
                     <p id="header-ln">notes</p>
-                    <div className="wr-hei-note">
+                    <div className="wr-hei-note" onScroll={handleScrollList}>
                         <div className="list-note">
                             {
                                 props.notes && props.notes.map((note, i) => {
@@ -348,24 +386,22 @@ function WID(props) {
             <div className="main-note">
                 <div id="header-editor" className="flex pl-4 pt-1 pb-1 mb-2 bg-gray-200">
                     <div id="con-r-n items-start flex-grow">
-                        <Button id="btn-n-note" color="primary" onClick={onNewNote} size="small">
-                            New
+                        <Button label="New" name="btn-new-note" variant="outlined" color="primary" onClick={onNewNote} size="small"></Button>
+                        <Input name="input-search" placeholder="Search"  size="small" onChange={search} />
+                        <Button label={isPinned ? 'Unpin' : 'Pin'} color="primary" onClick={pinNote} size="small" variant="outlined">
                         </Button>
-                        <Input id="input-search" placeholder="Search"  size="small" onChange={search} />
-                        <Button color="primary" onClick={pinNote} size="small">
-                            {isPinned ? 'Unpin' : 'Pin'}
-                        </Button>
-                        <Button id="btn-delete" color="secondary" onClick={deleteNote} size="small">
-                            Delete
+                        <Button label="Delete" name="btn-delete" variant="outlined" color="secondary" onClick={deleteNote} size="small">
                         </Button>
                     </div>
-                    <div id="tabs-area" className="">
+                    <div id="tabs-area">
                         <AsyncCreatableSelect
                             isMulti
-                            components={{ ClearIndicator:() => null }}
+                            placeholder={'tags'}
+                            components={{ ClearIndicator:() => null, DropdownIndicator:() => null }}
                             onKeyDown={onTabKeyDown}
                             onChange={handleChangeTags}
                             value={tags}
+                            styles={mergedStylesSelect}
                             loadOptions={promisesOption}
                         />
                     </div>
@@ -420,6 +456,7 @@ const mapDispatchToProps = {
     loadDefineIdentity: loadDefineIdentity,
     initDetailnote: initDetailnote,
     pinNote: pinNote,
+    loadNotesPagi: loadNotesPagi,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(withRouter(Layout(WID)));

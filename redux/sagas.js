@@ -23,8 +23,11 @@ import {
   pinNote,
   updateItemNotePin,
   saveTags,
-  updateTagsSaved
+  updateTagsSaved,
+  loadNotesPagi,
+  updateAppentNotes,
 } from './actions/noteAction';
+
 import noteService from './services/noteService.js';
 import authService from './services/authService.js';
 import Router from 'next/router';
@@ -59,8 +62,8 @@ function* fnPinNote({payload}) {
 
 function* fnLoadListNote({payload}) {
   try {
-    console.log('fnLoadListNote:', payload)
-    const data = yield noteService.fnLoadListNote(payload);
+    console.log('fnLoadListNote:', {userID: payload})
+    const data = yield noteService.fnLoadListNote({userID: payload});
     yield put(updateListNote(data.data));
   } catch (error) {
     yield put(getDataFail(error));
@@ -154,6 +157,9 @@ function* fnNewEmptyNote() {
     const noteSaved = yield call([noteService, 'fnSaveNote'], noteID, body);
 
     yield put(updateItemList(noteSaved));
+    if (noteSaved.code == 200) {
+        yield put(fillNoteActive(noteSaved.data));
+    }
     yield put(changeStatusForSave(true)); //cancel save editor.
 }
 
@@ -256,6 +262,26 @@ function* fnDeleteNote({ payload }) {
   yield put(changeStatusForSave(true));
 }
 
+function* fnLoadNotesPagi({payload}) {
+    console.log('fnLoadNotesPagi:', payload);
+
+    try {
+        let userID = yield select((state) => state.note.userAuth._source.userGeneId);
+        let _scroll_id = yield select((state) => state.note._scroll_id);
+        console.log('fnLoadNotesPagi:_scroll_id', _scroll_id);
+        let body = {
+            userID: userID,
+            _scroll_id: _scroll_id,
+        };
+        console.log('fnLoadNotesPagi:', body)
+        const results = yield noteService.fnLoadListNote(body);
+        console.log('fnLoadNotesPagi:', results)
+        yield put(updateAppentNotes(results.data));
+    } catch (error) {
+        console.log('fnLoadNotesPagi:error', error)
+    }
+}
+
 // notice how we now only export the rootSaga
 // single entry point to start all Sagas at once
 export default function* rootSaga(context) {
@@ -274,5 +300,6 @@ export default function* rootSaga(context) {
     takeLatest(deleteNote().type, fnDeleteNote),
     takeLatest(pinNote().type, fnPinNote),
     takeLatest(saveTags().type, fnSaveTags),
+    takeLatest(loadNotesPagi().type, fnLoadNotesPagi),
   ])
 }
