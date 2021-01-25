@@ -1,5 +1,5 @@
 //Action Types
-import {createAction} from 'redux-actions';
+import {createSideEffectActions, createAction} from 'redux-actions';
 
 export const LOAD_LIST_NOTE = 'LOAD_LIST_NOTE';
 export const UPDATE_LIST_NOTE = 'UPDATE_LIST_NOTE';
@@ -27,6 +27,8 @@ export const PIN_NOTE = 'PIN_NOTE';
 export const UPDATE_ITEM_NOTE_PIN = 'UPDATE_ITEM_NOTE_PIN';
 export const SAVE_TAGS = 'SAVE_TAGS';
 export const UPDATE_TAGS_SAVED = 'UPDATE_TAGS_SAVED';
+export const LOAD_NOTES_PAGI = 'LOAD_NOTES_PAGI';
+export const UPDATE_APPENT_NOTES = 'UPDATE_APPENT_NOTES';
 
 export const [
   loadListNote,
@@ -54,7 +56,9 @@ export const [
   pinNote,
   updateItemNotePin,
   saveTags,
-  updateTagsSaved
+  updateTagsSaved,
+  loadNotesPagi,
+  updateAppentNotes,
   ] = [
   createAction(LOAD_LIST_NOTE),
   createAction(UPDATE_LIST_NOTE),
@@ -82,5 +86,7 @@ export const [
   createAction(UPDATE_ITEM_NOTE_PIN),
   createAction(SAVE_TAGS),
   createAction(UPDATE_TAGS_SAVED),
+  createAction(LOAD_NOTES_PAGI),
+  createAction(UPDATE_APPENT_NOTES),
 ];
 

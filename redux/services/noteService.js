@@ -43,10 +43,7 @@ export default {
             referrerPolicy: 'no-referrer', // no-referrer, *client
         });
     },
-  fnLoadListNote(userID) {
-    var body = {
-      userID: userID
-    }
+  fnLoadListNote(body) {
     return request('/api/note', {
       method: 'POST', // *GET, POST, PUT, DELETE, etc.
       mode: 'cors', // no-cors, *cors, same-origin
