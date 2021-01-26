@@ -144,17 +144,24 @@ function* fnNewEmptyNote() {
     var editorState = '';
 
     yield put(updateEditorState(editorState));
+    let userID = yield select((state) => state.note.userAuth._source.userGeneId);
+
     var body = {
         'content': JSON.stringify(editorState),
         'rawTextSearch': '',
         'shortContent': {shortText: null, shortImage: null},
-        'userID': localStorage.getItem('userID'),
+        'userID': userID,
         'createdAt': new Date().getTime(),
         'updatedAt': new Date().getTime(),
         'deletedAt': null,
     };
 
     const noteSaved = yield call([noteService, 'fnSaveNote'], noteID, body);
+    const isSearch = yield select((state) => state.note.isSearch);
+    if (isSearch) {
+        yield* fnLoadListNote({payload: userID});
+        yield* fnUnSearch();
+    }
 
     yield put(updateItemList(noteSaved));
     if (noteSaved.code == 200) {
@@ -204,16 +211,18 @@ function* fnActiveNoteSidebar({ payload }) {
 
 function* fnSearch({ payload }) {
     console.log('fnSearch', payload)
+    let userID = yield select((state) => state.note.userAuth._source.userGeneId);
     let body = {
-        userID: localStorage.getItem('userID'),
+        userID: userID,
         text: payload,
     }
+
     yield put(changeStatusForSave(false));
-    const results = yield call([noteService, 'fnSearch'], body);
+    const results = yield noteService.fnLoadListNote(body);
     yield put(changeStatusForSave(true));
 
     console.log('fnSearch:call', results)
-    yield put(updateListNote(results.data.hits));
+    yield put(updateListNote(results.data));
 
     let noteLastest = !isEmpty(results.data.hits) ? results.data.hits[0] : null;
     console.log('fnSearch:noteLastest:', noteLastest);
@@ -227,7 +236,7 @@ function* fnSearch({ payload }) {
 
 function* fnUnSearch() {
     console.log('fnUnSearch', router);
-    var userID = localStorage.getItem('userID');
+    const userID = yield select((state) => state.note.userAuth._source.userGeneId);
     const router = Router.router;
     yield call(Router.push, `/w/[id]`, `/w/${router.query.id}`, {shallow:true});
     yield* fnLoadListNote({payload: userID});

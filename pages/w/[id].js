@@ -9,6 +9,8 @@ import request from '../../redux/requestHelper';
 import Input from '../../components/Input';
 import NoSSR from 'react-no-ssr';
 
+import { HotKeys } from "react-hotkeys";
+
 import {
   loadListNote,
   startSaveNote,
@@ -150,6 +152,12 @@ class FormHtmlEditor extends Component {
     }
 }
 
+const keyMap = {
+    NEW_NOTE: "ctrl+N",
+    DELETE_NODE: ["del"],
+};
+
+  
 function WID(props) {
     console.log('rerun:WID')
     const [eventText, setEventText] = useState('');
@@ -172,6 +180,7 @@ function WID(props) {
     let router = useRouter();
 
     let onNewNote = () => {
+        console.log('onNewNote');
         props.newEmptyNote();
     };
 
@@ -256,7 +265,6 @@ function WID(props) {
         }
     })
 
-    console.log('tags:', tags)
     let pinNote = (e) => {
         props.pinNote({noteID: props.noteActive._id, action: !isPinned});
     };
@@ -269,8 +277,6 @@ function WID(props) {
             setIsPinned(notePinned !== undefined);
         }
     }, [props.notesPinned, props.noteActive]);
-
-    console.log('isPinned', isPinned);
 
     const styleNotImage = {maxWidth: '100%'};
     const styleHasImage = {maxWidth: '122px'};
@@ -314,119 +320,133 @@ function WID(props) {
         }),
     );
 
-    const handleScrollList = (e) => {
+    const handleScrollList = useCallback((e) => {
         const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
         if (bottom) { 
             console.log('handleScrollList:touchbottom');
             props.loadNotesPagi();
         }
+    });
+
+    const getShortContentItem = useCallback((note) => {
+        let shortContent = (note._source && note._source.shortContent && note._source.shortContent.shortText) ? note._source.shortContent.shortText.substring(0, 18) : '';
+        return shortContent;
+    });
+    
+    const handlersHotkey = {
+        NEW_NOTE: onNewNote
+    };
+
+    const fnOnFocus = (e) => {
+        console.log('fnOnFocus:', e)
     }
 
     return (
-        <main>
-            <div id="stick-note">
-                <div id="inner-stick">
-                    <p id="header-ln">pinned</p>
-                        <div className="list-note">
-                            <ul className="ul-note">
-                            {
-                                props.notesPinned && props.notesPinned.map((note, i) => {
+        <HotKeys handlers={handlersHotkey}>
+            <main onFocus={fnOnFocus}>
+                <div id="stick-note">
+                    <div id="inner-stick">
+                        <p id="header-ln">pinned</p>
+                            <div className="list-note">
+                                <ul className="ul-note">
+                                {
+                                    props.notesPinned && props.notesPinned.map((note, i) => {
+                                        let styleText = styleNotImage;
+                                        if (note._source && note._source.shortContent
+                                            && note._source.shortContent.shortImage) {
+                                            styleText = styleHasImage;
+                                        }
 
-                                let styleText = styleNotImage;
-                                if (note._source && note._source.shortContent
-                                    && note._source.shortContent.shortImage) {
-                                    styleText = styleHasImage;
+                                        return (
+                                            <li key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
+                                                onClick={activeNoteSidebar.bind(this, note)}>
+                                                <span style={styleText} className="text">{getShortContentItem(note)}</span>
+                                            </li>
+                                        )
+                                    })
                                 }
-
-                                return (
-                                    <li key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
-                                        onClick={activeNoteSidebar.bind(this, note)}>
-                                        <span style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText.substring(0, 18) : ''}</span>
-                                    </li>
-                                )
-                                })
-                            }
-                            </ul>
-                        </div>
+                                </ul>
+                            </div>
+                    </div>
                 </div>
-            </div>
-            <div className="sidebar-note">
-                <div className="inner-list-note">
-                    <p id="header-ln">notes</p>
-                    <div className="wr-hei-note" onScroll={handleScrollList}>
-                        <div className="list-note">
-                            {
-                                props.notes && props.notes.map((note, i) => {
+                <div className="sidebar-note">
+                    <div className="inner-list-note">
+                        <p id="header-ln">notes</p>
+                        <div className="wr-hei-note" onScroll={handleScrollList}>
+                            <div className="list-note">
+                                {
+                                    props.notes && props.notes.map((note, i) => {
 
-                                let styleText = styleNotImage;
-                                if (note._source && note._source.shortContent
-                                    && note._source.shortContent.shortImage) {
-                                    styleText = styleHasImage;
-                                }
-                                return (
-                                    <div key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
-                                        onClick={activeNoteSidebar.bind(this, note)}>
-                                        <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
-                                        {
-                                            (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
-                                            (
-                                            <div className="image-s">
-                                                <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
-                                            </div>
-                                            )
+                                    let styleText = styleNotImage;
+                                    if (note._source && note._source.shortContent
+                                        && note._source.shortContent.shortImage) {
+                                        styleText = styleHasImage;
                                     }
-                                    </div>
-                                )
-                                })
-                            }
+                                    return (
+                                        <div key={i} className={classNames({'note-c': true, 'active': note._id == props.noteActive._id})}
+                                            onClick={activeNoteSidebar.bind(this, note)}>
+                                            <div style={styleText} className="text">{(note._source && note._source.shortContent) ? note._source.shortContent.shortText : ''}</div>
+                                            {
+                                                (note._source && note._source.shortContent && note._source.shortContent.shortImage) &&
+                                                (
+                                                <div className="image-s">
+                                                    <img src={(note._source.shortContent && note._source.shortContent.shortImage) ? note._source.shortContent.shortImage.src : ''} />
+                                                </div>
+                                                )
+                                        }
+                                        </div>
+                                    )
+                                    })
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div className="main-note">
-                <div id="header-editor" className="flex pl-4 pt-1 pb-1 mb-2 bg-gray-200">
-                    <div id="con-r-n items-start flex-grow">
-                        <Button label="New" name="btn-new-note" variant="outlined" color="primary" onClick={onNewNote} size="small"></Button>
-                        <Input name="input-search" placeholder="Search"  size="small" onChange={search} />
-                        <Button label={isPinned ? 'Unpin' : 'Pin'} color="primary" onClick={pinNote} size="small" variant="outlined">
-                        </Button>
-                        <Button label="Delete" name="btn-delete" variant="outlined" color="secondary" onClick={deleteNote} size="small">
-                        </Button>
-                    </div>
-                    <div id="tabs-area">
-                        <AsyncCreatableSelect
-                            isMulti
-                            placeholder={'tags'}
-                            components={{ ClearIndicator:() => null, DropdownIndicator:() => null }}
-                            onKeyDown={onTabKeyDown}
-                            onChange={handleChangeTags}
-                            value={tags}
-                            styles={mergedStylesSelect}
-                            loadOptions={promisesOption}
-                        />
-                    </div>
-                    <div className="flex flex-1 rounded-lg items-end justify-end">
-                        <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img w-6"/></span>
-                        <div className="m-2">
-                            <span id="name-auth" >{props.userAuth && props.userAuth._source.username}</span>
-                        </div>
-                        <div id="wr-ar-lo" className="items-end">
-                            <Button id="btn-logout" color="secondary" onClick={logout} size="small">
-                                Logout
+                <div className="main-note">
+                    <div id="header-editor" className="flex pl-4 pt-1 pb-1 mb-2 bg-gray-200">
+                        <div id="con-r-n items-start flex-grow">
+                            <Button label="New" name="btn-new-note" variant="outlined" color="primary" onClick={onNewNote} size="small"></Button>
+                            <Input name="input-search" placeholder="Search"  size="small" onChange={search} />
+                            <Button label={isPinned ? 'Unpin' : 'Pin'} color="primary" onClick={pinNote} size="small" variant="outlined">
+                            </Button>
+                            <Button label="Delete" name="btn-delete" variant="outlined" color="secondary" onClick={deleteNote} size="small">
                             </Button>
                         </div>
+                        <div id="tabs-area">
+                            <AsyncCreatableSelect
+                                isMulti
+                                placeholder={'tags'}
+                                components={{ ClearIndicator:() => null, DropdownIndicator:() => null }}
+                                onKeyDown={onTabKeyDown}
+                                onChange={handleChangeTags}
+                                value={tags}
+                                styles={mergedStylesSelect}
+                                loadOptions={promisesOption}
+                            />
+                        </div>
+                        <div className="flex flex-1 rounded-lg items-end justify-end">
+                            <span id="avatar"><img src={props.userAuth && props.userAuth._source.photos[0].value} className="re-img w-6"/></span>
+                            <div className="m-2">
+                                <span id="name-auth" >{props.userAuth && props.userAuth._source.username}</span>
+                            </div>
+                            <div id="wr-ar-lo" className="items-end">
+                                <Button id="btn-logout" color="secondary" onClick={logout} size="small">
+                                    Logout
+                                </Button>
+                            </div>
+                        </div>
                     </div>
+                    <NoSSR>
+                        <div className="editor">
+                            {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
+                            <FormHtmlEditor value={props.editorState}
+                                ref={reactQuillRef}
+                                onChange={onChangeEditor} />
+                        </div>
+                    </NoSSR>
                 </div>
-                <NoSSR>
-                    <div className="editor">
-                        {props.shouldSave.length != 0 && (<Loader type="ThreeDots" color="#2BAD60" height="100" width="100" />)}
-                        <FormHtmlEditor value={props.editorState}
-                            ref={reactQuillRef}
-                            onChange={onChangeEditor} />
-                    </div>
-                </NoSSR>
-            </div>
-        </main>
+            </main>
+        </HotKeys>
     )
 }
 

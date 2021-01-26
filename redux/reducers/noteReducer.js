@@ -69,9 +69,11 @@ const noteReducer = handleActions({
     [SET_SEARCH]: (state, action) => {
         return {...state, isSearch: true, textSearch: action.payload};
     },
-    [UPDATE_LIST_NOTE]: (state, action) => {
-        return {...state, notes: action.payload.hits, _scroll_id: action.payload._scroll_id};
-    },
+    [UPDATE_LIST_NOTE]: produce((state, {payload}) => {
+        console.log('update list note:', payload);
+        state.notes = payload.hits;
+        state._scroll_id = payload._scroll_id;
+    }),
     [UPDATE_ITEM_LIST]: (state, action) => {
         if (action.payload.code == 200) {
             let indexNoteActive = findIndex(state.notes, (note) => {

@@ -2,6 +2,12 @@ const { Client } = require('@elastic/elasticsearch')
 const client = new Client({ node: process.env.ES_HOST })
 import {responseError, responseSuccess} from './util';
 
+function sanitizeValue(value) {
+    return value
+      .replace(/[<>]/g, ``)
+      .replace(/([+-=&|><!(){}[\]^"~*?:\\/])/g, '\\$1')
+}
+
 export default async (req, res) => {
   if (req.method === 'POST') {
     const { userID, _scroll_id } = req.body;
@@ -23,39 +29,75 @@ export default async (req, res) => {
             responseError(res, 'Server errors');
         }
     } else {
-      client.search({
-        scroll: '30s',
-        index: 'wnote',
-        body: {
-          query: {
-            bool: {
-              must: [
-                {match: {userID: userID}},
-              ],
-              must_not: {
-                exists: {
-                  field: 'deletedAt'
+        let paramsSearch = {};
+        if (req.body.text) {
+            let textSearch = sanitizeValue(req.body.text);
+            paramsSearch = {          
+                function_score: {
+                    query: {
+                    bool: {
+                        must: [
+                        {
+                            bool: {
+                                should: [
+                                    {match: {rawTextSearch: textSearch}},
+                                    {wildcard: {'rawTextSearch.keyword': '*'+textSearch+'*'}},
+                                    {match: {'tags': textSearch}}
+                                ]
+                            }
+                        }
+                        ],
+                        filter: [
+                            {term: {'userID.keyword': req.body.userID}},
+                        ],
+                    },
+                    },
+                    script_score: {
+                        script: {
+                            source: "Math.log10(doc['views'].value + 1)",
+                        },
+                    },
+                    score_mode: 'sum',
+                    boost_mode: 'sum',
+                },
+            };
+        } else {
+            paramsSearch = {
+                bool: {
+                    must: [
+                        {match: {userID: userID}},
+                    ],
+                    must_not: {
+                        exists: {
+                            field: 'deletedAt'
+                        }
+                    }
                 }
-              }
-            }
-          },
-          sort: {
-            updatedAt: {order: 'desc'},
-          },
-          from: 0,
-          size: 10,
+            };
         }
-      },function (error, response, status) {
-        console.log('after search:', error, response, status);
-          if (error) {
-            responseError(res, error);
-            console.log("search error: "+error)
-          }
-          else {
-            console.log("--- Response note list: ---", response);
-            responseSuccess(res, {hits: response.body.hits.hits, _scroll_id: response.body._scroll_id});
-          }
-      });
+
+        client.search({
+            scroll: '30s',
+            index: 'wnote',
+            body: {
+                query: paramsSearch,
+                sort: {
+                    updatedAt: {order: 'desc'},
+                },
+                from: 0,
+                size: 20,
+            }
+        },function (error, response, status) {
+            console.log('after search:', error, response, status);
+            if (error) {
+                responseError(res, error);
+                console.log("search error: "+error)
+            }
+            else {
+                console.log("--- Response note list: ---", response);
+                responseSuccess(res, {hits: response.body.hits.hits, _scroll_id: response.body._scroll_id});
+            }
+        });
     }
   }
 }
