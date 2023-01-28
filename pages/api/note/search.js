@@ -10,19 +10,20 @@ function sanitizeValue(value) {
     .replace(/([+-=&|><!(){}[\]^"~*?:\\/])/g, '\\$1')
 }
 
-function findEmberValue(text) {
-    return new Promise((resolve, reject) => {
-        request('http://127.0.0.1:5000/query?key='+text, { json: true }, (err, res, body) => {
-            if (err) {
-                console.log(err)
-                reject(err)
-            } else {
-                console.log('findSimilarTag:body:', body)
-                resolve(body)
-            }
-        });
-    })
-}
+// Find ember text use AI, current skip.
+// function findEmberValue(text) {
+//     return new Promise((resolve, reject) => {
+//         request('http://127.0.0.1:5000/query?key='+text, { json: true }, (err, res, body) => {
+//             if (err) {
+//                 console.log(err)
+//                 reject(err)
+//             } else {
+//                 console.log('findSimilarTag:body:', body)
+//                 resolve(body)
+//             }
+//         });
+//     })
+// }
 
 export default async (req, res) => {
   if (req.method === 'POST') {

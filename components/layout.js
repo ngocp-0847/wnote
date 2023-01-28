@@ -31,6 +31,14 @@ const withLayout = (Page) => {
             width: 100%;
             height: 100%;
           }
+          #__next > div {
+            width: 100%;
+            height: 100%;
+          } 
+          #__next > div > div {
+            width: 100%;
+            height: 100%;
+          } 
         `}</style>
       </div>
   )
