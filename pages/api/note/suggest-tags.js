@@ -1,6 +1,5 @@
 import client from '../../../lib/es';
 import {responseError, responseSuccess} from '../util';
-import { v4 as uuidv4 } from 'uuid';
 import withPassport from '../../../lib/withPassport';
 
 async function suggestTags(user, tags) {
@@ -29,10 +28,8 @@ async function suggestTags(user, tags) {
 
 export default withPassport(async (req, res) => {
   if (req.method === 'GET') {
-    console.log('suggest-tags:', req.query.search)
     try {
       let tags = await suggestTags(req.user, req.query.search);
-      console.log('suggest-tags:tags:', tags)
       responseSuccess(res, {tags: tags});
     } catch (e) {
       console.log('suggest-tags:errors:', e)
