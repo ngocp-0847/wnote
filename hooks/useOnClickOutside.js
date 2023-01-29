@@ -1,4 +1,3 @@
-// gkc_hash_code : 01DNDYY08Y2RN2YV33ABHHFNJJ
 import { useEffect, useRef } from 'react';
 
 export default function useOnClickOutside(refs, handler) {
